@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace AoC_2024
 {
@@ -10,9 +11,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day1a());
+            Console.WriteLine(Day2a());
             /* Part b */
-            Console.WriteLine(Day1b());
+            Console.WriteLine(Day2b());
         }
 
         static string[] ReadDayFile(int day)
@@ -73,6 +74,104 @@ namespace AoC_2024
             }
             
             return similar;
+        }
+
+        #endregion
+
+        #region Day2        
+        static int Day2a()
+        {
+            string[] file = ReadDayFile(2);
+            int safe = 0;
+
+            for (int i = 0; i < file.Length; i++)
+            {
+                List<int> reports = file[i].Split(" ").Select(int.Parse).ToList();
+                bool isAscending = true;
+                bool isDescending = true;
+                bool isSafe = true;
+
+                for (int j = 1; j < reports.Count(); j++)
+                {
+                    int diff = reports[j] - reports[j - 1];
+
+                    if (Math.Abs(diff) > 3)
+                    {
+                        isAscending = false;
+                        isDescending = false;
+                        isSafe = false;
+                        break;
+                    }
+
+                    if (diff < 0) isAscending = false;
+                    if (diff > 0) isDescending = false;
+                    if (diff == 0) 
+                    {
+                        isAscending = false;
+                        isDescending = false;
+                    }
+
+                    if (!isAscending && !isDescending)
+                    {
+                        isSafe = false;
+                        break;
+                    }
+                }
+
+                if (isSafe)
+                {
+                    safe++;
+                }
+            }
+
+            return safe;
+        }
+
+        static int Day2b()
+        {
+        string[] file = ReadDayFile(2); // Read the input file
+        int safe = 0;
+
+            for (int i = 0; i < file.Length; i++)
+            {
+                List<int> reports = file[i].Split(" ").Select(int.Parse).ToList(); 
+
+                if (IsSafeReport(reports, true) || IsSafeReport(reports, false))
+                {
+                    safe++;
+                    continue;
+                }
+
+                bool isSafe = false;
+                for (int j = 0; j < reports.Count(); j++)
+                {
+                    List<int> modifiedReports = reports.Where((_, idx) => idx != j).ToList();
+                    if (IsSafeReport(modifiedReports, true) || IsSafeReport(modifiedReports, false))
+                    {
+                        isSafe = true;
+                        break;
+                    }
+                }
+
+                if (isSafe)
+                {
+                    safe++;
+                }
+            }
+
+            return safe;
+        }
+
+        static bool IsSafeReport(List<int> reports, bool ascending)
+        {
+            for (int i = 1; i < reports.Count; i++)
+            {
+                int diff = reports[i] - reports[i - 1];
+                if (ascending && diff < 0) return false;
+                if (!ascending && diff > 0) return false;
+                if (Math.Abs(diff) > 3 || diff == 0) return false;
+            }
+            return true;
         }
 
         #endregion

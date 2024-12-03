@@ -12,8 +12,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day1a())
-	fmt.Println(day1b())
+	fmt.Println(day2a())
+	fmt.Println(day2b())
 }
 
 func day1a() int {
@@ -47,7 +47,7 @@ func day1a() int {
 		return cmp.Compare(a, b)
 	})
 
-	for i, _ := range list1 {
+	for i := range list1 {
 		diff += int(math.Abs(float64(list1[i] - list2[i])))
 	}
 
@@ -88,6 +88,110 @@ func day1b() int {
 	}
 
 	return similar
+}
+
+func day2a() int {
+	file := strings.Split(readDayFile(2), "\n")
+	safe := 0
+
+	for _, line := range file {
+		reports := parseLine(line)
+		isAscending := true
+		isDescending := true
+		isSafe := true
+
+		for i := 1; i < len(reports); i++ {
+			diff := reports[i] - reports[i-1]
+
+			if math.Abs(float64(diff)) > 3 {
+				isAscending = false
+				isDescending = false
+				isSafe = false
+				break
+			}
+
+			if diff < 0 {
+				isAscending = false
+			}
+			if diff > 0 {
+				isDescending = false
+			}
+			if diff == 0 {
+				isAscending = false
+				isDescending = false
+			}
+
+			if !isAscending && !isDescending {
+				isSafe = false
+				break
+			}
+		}
+
+		if isSafe {
+			safe++
+		}
+	}
+
+	return safe
+}
+
+func day2b() int {
+	file := strings.Split(readDayFile(2), "\n")
+	safe := 0
+
+	for _, line := range file {
+		reports := parseLine(line)
+
+		if isSafeReport(reports, true) || isSafeReport(reports, false) {
+			safe++
+			continue
+		}
+
+		isSafe := false
+		for j := 0; j < len(reports); j++ {
+			modifiedReports := append([]int{}, reports[:j]...)          // Copy the first part
+			modifiedReports = append(modifiedReports, reports[j+1:]...) // Append the second part
+
+			if isSafeReport(modifiedReports, true) || isSafeReport(modifiedReports, false) {
+				isSafe = true
+				break
+			}
+		}
+
+		if isSafe {
+			safe++
+		}
+	}
+
+	return safe
+}
+
+func parseLine(line string) []int {
+	parts := strings.Fields(line)
+	var result []int
+	for _, part := range parts {
+		num, err := strconv.Atoi(part)
+		if err == nil {
+			result = append(result, num)
+		}
+	}
+	return result
+}
+
+func isSafeReport(reports []int, ascending bool) bool {
+	for i := 1; i < len(reports); i++ {
+		diff := reports[i] - reports[i-1]
+		if ascending && diff < 0 {
+			return false
+		}
+		if !ascending && diff > 0 {
+			return false
+		}
+		if math.Abs(float64(diff)) > 3 || diff == 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func readDayFile(day int32) string {
