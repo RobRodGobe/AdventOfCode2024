@@ -9,13 +9,15 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"regexp"
 )
 
 func main() {
-	fmt.Println(day2a())
-	fmt.Println(day2b())
+	fmt.Println(day3a())
+	fmt.Println(day3b())
 }
 
+// region Day1
 func day1a() int {
 	file := readDayFile(1)
 
@@ -89,7 +91,9 @@ func day1b() int {
 
 	return similar
 }
+// endregion
 
+// region Day2
 func day2a() int {
 	file := strings.Split(readDayFile(2), "\n")
 	safe := 0
@@ -193,6 +197,54 @@ func isSafeReport(reports []int, ascending bool) bool {
 	}
 	return true
 }
+// endregion
+
+// region Day3
+func day3a() int {
+	mult := 0
+	file := readDayFile(3)
+	pattern := `mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)`
+	r := regexp.MustCompile(pattern)
+	matches := r.FindAllString(file, -1)
+
+	for i := range matches {
+		numbers := strings.Split(strings.TrimSuffix(strings.TrimPrefix(matches[i], "mul("), ")"), ",")
+		x, _ := strconv.Atoi(numbers[0])
+		y, _ := strconv.Atoi(numbers[1])
+		mult += x * y
+	}
+
+	return mult
+}
+
+func day3b() int {
+	mult := 0
+	file := readDayFile(3)
+	pattern := `mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)|do\(\)|don't\(\)`
+	r := regexp.MustCompile(pattern)
+	matches := r.FindAllString(file, -1)
+
+	multiply := true
+
+	for i := range matches {
+		if matches[i] == "do()" {
+			multiply = true
+		} else if matches[i] == "don't()" {
+			multiply = false
+		}
+
+		if multiply && strings.HasPrefix(matches[i], "mul(") {
+			numbers := strings.Split(strings.TrimSuffix(strings.TrimPrefix(matches[i], "mul("), ")"), ",")
+			x, _ := strconv.Atoi(numbers[0])
+			y, _ := strconv.Atoi(numbers[1])
+			mult += x * y
+		}		
+	}
+
+	return mult
+}
+
+// endregion
 
 func readDayFile(day int32) string {
 	filePath := fmt.Sprintf("../AoC_Files/%d.txt", day)

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace AoC_2024
 {
@@ -11,9 +12,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day2a());
+            Console.WriteLine(Day3a());
             /* Part b */
-            Console.WriteLine(Day2b());
+            Console.WriteLine(Day3b());
         }
 
         static string[] ReadDayFile(int day)
@@ -174,6 +175,54 @@ namespace AoC_2024
             return true;
         }
 
+        #endregion
+
+        #region Day3
+        static int Day3a()
+        {
+            int mult = 0;
+            string[] file = ReadDayFile(3);
+            string line = string.Join("", file);
+
+            string pattern = @"mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)";
+            RegexOptions options = RegexOptions.Multiline;
+            MatchCollection matches = Regex.Matches(line, pattern, options);
+
+            for (int i = 0; i < matches.Count; i++)
+            {
+                string[] numbers = matches[i].Value.Replace("mul(", "").Replace(")","").Split(",");
+                mult += Int32.Parse(numbers[0]) * Int32.Parse(numbers[1]);
+            }
+
+            return mult;
+        }
+
+        static int Day3b()
+        {
+            int mult = 0;
+            string[] file = ReadDayFile(3);
+            string line = string.Join("", file);
+
+            string pattern = @"mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)|do\(\)|don't\(\)";
+            RegexOptions options = RegexOptions.Multiline;
+            MatchCollection matches = Regex.Matches(line, pattern, options);
+
+            bool multiply = true;
+
+            for (int i = 0; i < matches.Count; i++)
+            {
+                if (matches[i].Value == "do()") multiply = true;
+                else if (matches[i].Value == "don't()") multiply = false;
+                
+                if (multiply && !matches[i].Value.Contains("do"))
+                {
+                    string[] numbers = matches[i].Value.Replace("mul(", "").Replace(")","").Split(",");
+                    mult += Int32.Parse(numbers[0]) * Int32.Parse(numbers[1]);
+                }
+            }
+
+            return mult;
+        }
         #endregion
     }
 }

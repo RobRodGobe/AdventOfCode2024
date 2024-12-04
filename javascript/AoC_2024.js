@@ -1,6 +1,8 @@
+const { parse } = require('path');
+
 function main() {
     // Day 1 a + b
-    console.log(day2a(), day2b());
+    console.log(day3a(), day3b());
 }
 
 function readDayFile(day){
@@ -12,6 +14,7 @@ function readDayFile(day){
     return fileContents
 }
 
+// #region Day1
 function day1a(){
     const file = readDayFile(1);
     const list1 = []
@@ -55,6 +58,9 @@ function day1b(){
     return similar;
 }
 
+// #endregion
+
+// #region Day2
 function day2a() {
     const file = readDayFile(2).split("\n");
     let safe = 0;
@@ -135,5 +141,50 @@ function isSafeReport(reports, ascending) {
     }
     return true;
 }
+
+// #endregion
+
+// #region Day3
+function day3a() {
+    let mult = 0;
+    const file = readDayFile(3);
+
+    const pattern = /mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)/gm;
+    const matches = file.match(pattern);
+
+    for (let i = 0; i < matches.length; i++) {
+        const numbers = matches[i].replace("mul(", "").replace(")", "").split(",");
+        mult += parseInt(numbers[0]) * parseInt(numbers[1]);
+    }
+
+    return mult;
+}
+
+function day3b() {
+    let mult = 0;
+    const file = readDayFile(3);
+
+    const pattern = /mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)|do\(\)|don't\(\)/gm;
+    const matches = file.match(pattern);
+
+    let multiply = true;
+
+    for (let i = 0; i < matches.length; i++) {
+        if (matches[i] === "do()") {
+            multiply = true;
+        }
+        else if (matches[i] === "don't()") {
+            multiply = false;
+        }
+
+        if (multiply && !matches[i].includes("do")) {
+            const numbers = matches[i].replace("mul(", "").replace(")", "").split(",");
+            mult += parseInt(numbers[0]) * parseInt(numbers[1]);
+        }
+    }
+    
+    return mult;
+}
+// #endregion
 
 main();

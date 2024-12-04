@@ -1,6 +1,8 @@
+import re
+
 def main():
     # Day 1
-    print(day2a(), day2b())
+    print(day3a(), day3b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -10,6 +12,7 @@ def readDayFile(day):
 
     return file_contents
 
+# region Day1
 def day1a():
     file = readDayFile(1)
     list1 = []
@@ -47,6 +50,9 @@ def day1b():
 
     return similar
 
+# endregion
+
+# region Day2
 def day2a():
     file = readDayFile(2)
     safe = 0
@@ -116,6 +122,44 @@ def is_safe_report(reports, ascending):
         if abs(diff) > 3 or diff == 0:
             return False 
     return True
+
+# endregion
+
+# region Day3
+def day3a():
+    mult = 0
+    file = readDayFile(3)
+    line = "".join(file)
+    pattern = r"mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)"
+    matches = re.findall(pattern, line)
+
+    for match in matches:
+        numbers = match.replace("mul(", "").replace(")", "").split(",")
+        mult += int(numbers[0]) * int (numbers[1])
+
+    return mult
+
+def day3b():
+    mult = 0
+    file = readDayFile(3)
+    line = "".join(file)
+    pattern = r"mul\([1-9][0-9]{0,2},[1-9][0-9]{0,2}\)|do\(\)|don't\(\)"
+    matches = re.findall(pattern, line)
+
+    multiply = True
+
+    for match in matches:
+        if match == "do()":
+            multiply = True
+        elif match == "don't()":
+            multiply = False
+        
+        if multiply and match.startswith("mul("):
+            numbers = match.replace("mul(", "").replace(")", "").split(",")
+            mult += int(numbers[0]) * int (numbers[1])
+
+    return mult
+# endregion
 
 if __name__ == "__main__":
     main()
