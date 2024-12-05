@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day3a(), day3b())
+    print(day4a(), day4b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -159,6 +159,77 @@ def day3b():
             mult += int(numbers[0]) * int (numbers[1])
 
     return mult
+# endregion
+
+# region Day4
+def day4a():
+    file = readDayFile(4)
+    word = "XMAS"
+    rows = len(file)
+    cols = len(file[0])
+    count = 0
+    word_length = len(word)
+
+    directions = [
+        (0, 1),   # Right
+        (1, 0),   # Down
+        (1, 1),   # Down-right
+        (1, -1),  # Down-left
+        (0, -1),  # Left
+        (-1, 0),  # Up
+        (-1, -1), # Up-left
+        (-1, 1)   # Up-right
+    ]
+
+    for x in range(rows):
+        for y in range(len(file[x])):
+            for dx, dy in directions:
+                if check_word_begin(x, y, dx, dy, word_length, rows, cols, word, file):
+                    count += 1
+
+    return count
+    
+def day4b():
+    file = readDayFile(4)
+    rows = len(file)
+    count = 0
+
+    for x in range(1, rows - 1):
+        cols = len(file[x])
+        for y in range(1, cols - 1):
+            if is_xmas_pattern(file, x, y):
+                count += 1
+
+    return count
+
+def check_word_begin(x, y, dx, dy, length, rows, cols, word, grid):
+    for i in range(length):
+        nx = x + i * dx
+        ny = y + i * dy
+
+        if nx < 0 or ny < 0 or nx >= rows or ny >= cols or grid[nx][ny] != word[i]:
+            return False
+    
+    return True
+
+def is_xmas_pattern(grid, x, y):
+    current_row_len = len(grid[x])
+    prev_row_len = len(grid[x - 1])
+    next_row_len = len(grid[x + 1])
+
+    if y - 1 < 0 or y + 1 >= current_row_len:
+        return False
+    if y - 1 >= prev_row_len or y + 1 >= next_row_len:
+        return False
+
+    top_left_to_bottom_right = grid[x - 1][y - 1] + grid[x][y] + grid[x + 1][y + 1]
+    top_right_to_bottom_left = grid[x - 1][y + 1] + grid[x][y] + grid[x + 1][y - 1]
+
+    return is_valid_mas_pattern(top_left_to_bottom_right) and is_valid_mas_pattern(top_right_to_bottom_left)
+
+def is_valid_mas_pattern(pattern):
+    return pattern == "MAS" or pattern == "SAM"
+
 # endregion
 
 if __name__ == "__main__":

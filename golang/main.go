@@ -6,15 +6,15 @@ import (
 	"log"
 	"math"
 	"os"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"regexp"
 )
 
 func main() {
-	fmt.Println(day3a())
-	fmt.Println(day3b())
+	fmt.Println(day4a())
+	fmt.Println(day4b())
 }
 
 // region Day1
@@ -91,6 +91,7 @@ func day1b() int {
 
 	return similar
 }
+
 // endregion
 
 // region Day2
@@ -197,6 +198,7 @@ func isSafeReport(reports []int, ascending bool) bool {
 	}
 	return true
 }
+
 // endregion
 
 // region Day3
@@ -238,10 +240,86 @@ func day3b() int {
 			x, _ := strconv.Atoi(numbers[0])
 			y, _ := strconv.Atoi(numbers[1])
 			mult += x * y
-		}		
+		}
 	}
 
 	return mult
+}
+
+// endregion
+
+// region Day4
+func day4a() int {
+	file := strings.Split(readDayFile(4), "\n")
+	word := "XMAS"
+	rows := len(file)
+	cols := len(file[0])
+	wordLength := len(word)
+	count := 0
+
+	directions := [][2]int{
+		{0, 1},   // Right
+		{1, 0},   // Down
+		{1, 1},   // Down-right
+		{1, -1},  // Down-left
+		{0, -1},  // Left
+		{-1, 0},  // Up
+		{-1, -1}, // Up-left
+		{-1, 1},  // Up-right
+	}
+
+	for x := 0; x < rows; x++ {
+		for y := 0; y < cols; y++ {
+			for _, dir := range directions {
+				dx, dy := dir[0], dir[1]
+				if checkWordBegin(x, y, dx, dy, wordLength, rows, cols, word, file) {
+					count++
+				}
+			}
+		}
+	}
+
+	return count
+}
+
+func day4b() int {
+	file := strings.Split(readDayFile(4), "\n")
+	rows := len(file)
+	cols := len(file[0])
+	count := 0
+
+	for x := 1; x < rows-1; x++ {
+		for y := 1; y < cols-1; y++ {
+			if isXMasPattern(file, x, y) {
+				count++
+			}
+		}
+	}
+
+	return count
+}
+
+func checkWordBegin(x, y, dx, dy, length, rows, cols int, word string, grid []string) bool {
+	for i := 0; i < length; i++ {
+		nx := x + i*dx
+		ny := y + i*dy
+
+		if nx < 0 || ny < 0 || nx >= rows || ny >= cols || grid[nx][ny] != word[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func isXMasPattern(grid []string, x, y int) bool {
+	topLeftToBottomRight := string(grid[x-1][y-1]) + string(grid[x][y]) + string(grid[x+1][y+1])
+	topRightToBottomLeft := string(grid[x-1][y+1]) + string(grid[x][y]) + string(grid[x+1][y-1])
+
+	return isValidMasPattern(topLeftToBottomRight) && isValidMasPattern(topRightToBottomLeft)
+}
+
+func isValidMasPattern(pattern string) bool {
+	return pattern == "MAS" || pattern == "SAM"
 }
 
 // endregion

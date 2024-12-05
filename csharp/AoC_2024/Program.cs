@@ -12,9 +12,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day3a());
+            Console.WriteLine(Day4a());
             /* Part b */
-            Console.WriteLine(Day3b());
+            Console.WriteLine(Day4b());
         }
 
         static string[] ReadDayFile(int day)
@@ -223,6 +223,98 @@ namespace AoC_2024
 
             return mult;
         }
+        #endregion
+
+        #region Day4
+        static int Day4a() 
+        {
+            string[] file = ReadDayFile(4);
+            string word = "XMAS";
+            int rows = file.Length;
+            int cols = file[0].Length;
+            int count = 0;
+            int wordLength = word.Length;
+
+            int[,] directions = {
+                { 0, 1 },   // Right
+                { 1, 0 },   // Down
+                { 1, 1 },   // Down-right
+                { 1, -1 },  // Down-left
+                { 0, -1 },  // Left
+                { -1, 0 },  // Up
+                { -1, -1 }, // Up-left
+                { -1, 1 }   // Up-right
+            };
+
+            for (int x = 0; x < rows; x++)
+            {
+                for (int y = 0; y < cols; y++)
+                {
+                    for (int d = 0; d < directions.GetLength(0); d++)
+                    {
+                        int dx = directions[d, 0];
+                        int dy = directions[d, 1];
+                        if (CheckWordBegin(x, y, dx, dy, wordLength, rows, cols, word, file))
+                        {
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        static int Day4b() 
+        {
+            string[] file = ReadDayFile(4);
+            int rows = file.Length;
+            int cols = file[0].Length;
+            int count = 0;
+
+            for (int x = 1; x < rows - 1; x++)
+            {
+                for (int y = 1; y < cols - 1; y++)
+                {
+                    if (IsXMasPattern(file, x, y))
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        static bool CheckWordBegin(int x, int y, int dx, int dy, int length, int rows, int cols, string word, string[] grid)
+        {
+            for (int i = 0; i < length; i++)
+            {
+                int nx = x + i * dx;
+                int ny = y + i * dy;
+
+                if (nx < 0 || ny < 0 || nx >= cols || ny >= cols || grid[nx][ny] != word[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        static bool IsXMasPattern(string[] grid, int x, int y)
+        {
+            string topLeftToBottomRight = $"{grid[x - 1][y - 1]}{grid[x][y]}{grid[x + 1][y + 1]}";
+            string topRightToBottomLeft = $"{grid[x - 1][y + 1]}{grid[x][y]}{grid[x + 1][y - 1]}";
+
+            return (IsValidMasPattern(topLeftToBottomRight) && IsValidMasPattern(topRightToBottomLeft));
+        }
+
+        static bool IsValidMasPattern(string pattern)
+        {
+            return pattern == "MAS" || pattern == "SAM";
+        }
+
         #endregion
     }
 }
