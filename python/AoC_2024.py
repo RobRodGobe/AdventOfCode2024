@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day4a(), day4b())
+    print(day5a(), day5b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -230,6 +230,69 @@ def is_xmas_pattern(grid, x, y):
 def is_valid_mas_pattern(pattern):
     return pattern == "MAS" or pattern == "SAM"
 
+# endregion
+
+# region Day5
+def day5a():
+    file = [line.strip() for line in readDayFile(5)]
+    divider_index = file.index('')
+    rules = [tuple(map(int, line.split('|'))) for line in file[:divider_index]]
+    updates = [list(map(int, line.split(','))) for line in file[divider_index + 1:]]
+
+    pages = 0
+    for update in updates:
+        if is_update_valid(update, rules):
+            pages += get_middle_page(update)
+
+    return pages
+
+def day5b():
+    file = [line.strip() for line in readDayFile(5)]
+    divider_index = file.index('')
+    rules = [tuple(map(int, line.split('|'))) for line in file[:divider_index]]
+    updates = [list(map(int, line.split(','))) for line in file[divider_index + 1:]]
+
+    pages = 0
+    for update in updates:
+        if not is_update_valid(update, rules):
+            corrected_update = correct_update(update, rules)
+            pages += get_middle_page(corrected_update)
+
+    return pages
+
+def is_update_valid(update, rules):
+    page_positions = {page: idx for idx, page in enumerate(update)}
+    for before, after in rules:
+        if before in page_positions and after in page_positions:
+            if page_positions[before] >= page_positions[after]:
+                return False
+    return True
+
+def get_middle_page(update):
+    return update[len(update) // 2]
+
+def correct_update(update, rules):
+    graph = {page: [] for page in update}
+    in_degree = {page: 0 for page in update}
+
+    for before, after in rules:
+        if before in update and after in update:
+            graph[before].append(after)
+            in_degree[after] += 1
+
+    queue = [page for page, degree in in_degree.items() if degree == 0]
+    sorted_update = []
+
+    while queue:
+        current = queue.pop(0)
+        sorted_update.append(current)
+
+        for neighbor in graph[current]:
+            in_degree[neighbor] -= 1
+            if in_degree[neighbor] == 0:
+                queue.append(neighbor)
+
+    return sorted_update
 # endregion
 
 if __name__ == "__main__":

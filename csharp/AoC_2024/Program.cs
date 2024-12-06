@@ -12,9 +12,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day4a());
+            Console.WriteLine(Day5a());
             /* Part b */
-            Console.WriteLine(Day4b());
+            Console.WriteLine(Day5b());
         }
 
         static string[] ReadDayFile(int day)
@@ -313,6 +313,140 @@ namespace AoC_2024
         static bool IsValidMasPattern(string pattern)
         {
             return pattern == "MAS" || pattern == "SAM";
+        }
+
+        #endregion
+
+        #region Day5
+        static int Day5a()
+        {
+            string[] file = ReadDayFile(5);
+            List<(int Before, int After)> rules = new List<(int Before, int After)>();
+            int dividerIndex = Array.IndexOf(file, "");
+            int pages = 0;
+
+            for (int i = 0; i < dividerIndex; i++)
+            {
+                var parts = file[i].Split('|').Select(int.Parse).ToArray();
+                rules.Add((parts[0], parts[1]));
+            }
+
+            List<List<int>> updates = new List<List<int>>();
+
+            for (int i = dividerIndex + 1; i < file.Length; i++)
+            {
+                updates.Add(file[i].Split(',').Select(int.Parse).ToList());
+            }
+
+            for (int i = 0; i < updates.Count(); i++)
+            {
+                if (IsUpdateValid(updates[i], rules))
+                {                    
+                    pages += GetMiddlePage(updates[i]);
+                }
+            }
+
+            return pages;
+        }
+
+        static int Day5b()
+        {
+            string[] file = ReadDayFile(5);
+            List<(int Before, int After)> rules = new List<(int Before, int After)>();
+            int dividerIndex = Array.IndexOf(file, "");
+            int pages = 0;
+
+            for (int i = 0; i < dividerIndex; i++)
+            {
+                var parts = file[i].Split('|').Select(int.Parse).ToArray();
+                rules.Add((parts[0], parts[1]));
+            }
+
+            List<List<int>> updates = new List<List<int>>();
+
+            for (int i = dividerIndex + 1; i < file.Length; i++)
+            {
+                updates.Add(file[i].Split(',').Select(int.Parse).ToList());
+            }
+
+            for (int i = 0; i < updates.Count(); i++)
+            {
+                if (!IsUpdateValid(updates[i], rules))
+                {
+                    List<int> correctedUpdate = CorrectUpdate(updates[i], rules);
+                    pages += GetMiddlePage(correctedUpdate);
+                }
+            }
+
+            return pages;
+        }
+
+        private static bool IsUpdateValid(List<int> update, List<(int Before, int After)> rules)
+        {
+            var pagePositions = update.Select((page, index) => (Page: page, Position: index))
+                                    .ToDictionary(x => x.Page, x => x.Position);
+
+            for (int i = 0; i < rules.Count(); i++)
+            {
+                if (pagePositions.ContainsKey(rules[i].Before) && pagePositions.ContainsKey(rules[i].After))
+                {
+                    if (pagePositions[rules[i].Before] >= pagePositions[rules[i].After])
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static int GetMiddlePage(List<int> update)
+        {
+            int midIndex = update.Count / 2;
+            return update[midIndex];
+        }
+
+        private static List<int> CorrectUpdate(List<int> update, List<(int Before, int After)> rules)
+        {
+            // Create a dependency graph
+            var graph = new Dictionary<int, List<int>>();
+            var inDegree = new Dictionary<int, int>();
+
+            for (int i = 0; i < update.Count(); i++)
+            {
+                graph[update[i]] = new List<int>();
+                inDegree[update[i]] = 0;
+            }
+
+            for (int i = 0; i < rules.Count(); i++)
+            {
+                if (update.Contains(rules[i].Before) && update.Contains(rules[i].After))
+                {
+                    graph[rules[i].Before].Add(rules[i].After);
+                    inDegree[rules[i].After]++;
+                }
+            }
+
+            // Perform topological sort
+            var sorted = new List<int>();
+            var queue = new Queue<int>(inDegree.Where(kvp => kvp.Value == 0).Select(kvp => kvp.Key));
+
+            while (queue.Count > 0)
+            {
+                int current = queue.Dequeue();
+                sorted.Add(current);
+
+                for (int i = 0; i < graph[current].Count(); i++)
+                {
+                    inDegree[graph[current][i]]--;
+                    if (inDegree[graph[current][i]] == 0)
+                    {
+                        queue.Enqueue(graph[current][i]);
+                    }
+                }
+            }
+
+            return sorted;
         }
 
         #endregion

@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day4a())
-	fmt.Println(day4b())
+	fmt.Println(day5a())
+	fmt.Println(day5b())
 }
 
 // region Day1
@@ -322,6 +322,140 @@ func isValidMasPattern(pattern string) bool {
 	return pattern == "MAS" || pattern == "SAM"
 }
 
+// endregion
+
+// region Day5
+func day5a() int {
+	rules, updates := parseFile()
+	pages := 0
+
+	for _, update := range updates {
+		if isUpdateValid(update, rules) {
+			pages += getMiddlePage(update)
+		}
+	}
+
+	return pages
+}
+
+func day5b() int {
+	rules, updates := parseFile()
+	pages := 0
+
+	for _, update := range updates {
+		if !isUpdateValid(update, rules) {
+			correctedUpdate := correctUpdate(update, rules)
+			pages += getMiddlePage(correctedUpdate)
+		}
+	}
+
+	return pages
+}
+
+func isUpdateValid(update []int, rules [][2]int) bool {
+	pagePositions := make(map[int]int)
+	for idx, page := range update {
+		pagePositions[page] = idx
+	}
+
+	for _, rule := range rules {
+		before, after := rule[0], rule[1]
+		if posBefore, okBefore := pagePositions[before]; okBefore {
+			if posAfter, okAfter := pagePositions[after]; okAfter {
+				if posBefore >= posAfter {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+func getMiddlePage(update []int) int {
+	return update[len(update)/2]
+}
+
+func correctUpdate(update []int, rules [][2]int) []int {
+	graph := make(map[int][]int)
+	inDegree := make(map[int]int)
+
+	for _, page := range update {
+		graph[page] = []int{}
+		inDegree[page] = 0
+	}
+
+	for _, rule := range rules {
+		before, after := rule[0], rule[1]
+		if contains(update, before) && contains(update, after) {
+			graph[before] = append(graph[before], after)
+			inDegree[after]++
+		}
+	}
+
+	var queue []int
+	for page, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, page)
+		}
+	}
+
+	var sorted []int
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		sorted = append(sorted, current)
+
+		for _, neighbor := range graph[current] {
+			inDegree[neighbor]--
+			if inDegree[neighbor] == 0 {
+				queue = append(queue, neighbor)
+			}
+		}
+	}
+
+	return sorted
+}
+
+func contains(slice []int, item int) bool {
+	for _, val := range slice {
+		if val == item {
+			return true
+		}
+	}
+	return false
+}
+
+func parseFile() ([][2]int, [][]int) {
+	file := strings.Split(strings.TrimSpace(readDayFile(5)), "\n")
+	var rules [][2]int
+	var updates [][]int
+	var dividerIndex int
+
+	for i, line := range file {
+		if line == "" {
+			dividerIndex = i
+			break
+		}
+	}
+
+	for i := 0; i < dividerIndex; i++ {
+		parts := strings.Split(file[i], "|")
+		before, _ := strconv.Atoi(parts[0])
+		after, _ := strconv.Atoi(parts[1])
+		rules = append(rules, [2]int{before, after})
+	}
+
+	for i := dividerIndex + 1; i < len(file); i++ {
+		var update []int
+		for _, num := range strings.Split(file[i], ",") {
+			val, _ := strconv.Atoi(num)
+			update = append(update, val)
+		}
+		updates = append(updates, update)
+	}
+
+	return rules, updates
+}
 // endregion
 
 func readDayFile(day int32) string {

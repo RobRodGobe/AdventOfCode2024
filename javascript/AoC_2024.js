@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day4a(), day4b());
+    console.log(day5a(), day5b());
 }
 
 function readDayFile(day){
@@ -259,6 +259,93 @@ function isXmasPattern(grid, x, y) {
 
 function isValidMasPattern(pattern) {
     return pattern === "MAS" || pattern === "SAM";
+}
+// #endregion
+
+// #region Day5
+function day5a() {
+    const file = readDayFile(5).split('\n');
+    const dividerIndex = file.indexOf('');
+    const rules = file.slice(0, dividerIndex).map(line => {
+        const [before, after] = line.split('|').map(Number);
+        return { before, after };
+    });
+    const updates = file.slice(dividerIndex + 1).map(line => line.split(',').map(Number));
+
+    let pages = 0;
+    for (const update of updates) {
+        if (isUpdateValid(update, rules)) {
+            pages += getMiddlePage(update);
+        }
+    }
+
+    return pages;
+}
+
+function day5b() {
+    const file = readDayFile(5).split('\n');
+    const dividerIndex = file.indexOf('');
+    const rules = file.slice(0, dividerIndex).map(line => {
+        const [before, after] = line.split('|').map(Number);
+        return { before, after };
+    });
+    const updates = file.slice(dividerIndex + 1).map(line => line.split(',').map(Number));
+
+    let pages = 0;
+    for (const update of updates) {
+        if (!isUpdateValid(update, rules)) {
+            const correctedUpdate = correctUpdate(update, rules);
+            pages += getMiddlePage(correctedUpdate);
+        }
+    }
+
+    return pages;
+}
+
+function isUpdateValid(update, rules) {
+    const pagePositions = new Map(update.map((page, index) => [page, index]));
+    for (const { before, after } of rules) {
+        if (pagePositions.has(before) && pagePositions.has(after)) {
+            if (pagePositions.get(before) >= pagePositions.get(after)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function getMiddlePage(update) {
+    const midIndex = Math.floor(update.length / 2);
+    return update[midIndex];
+}
+
+function correctUpdate(update, rules) {
+    const graph = new Map(update.map(page => [page, []]));
+    const inDegree = new Map(update.map(page => [page, 0]));
+
+    for (const { before, after } of rules) {
+        if (update.includes(before) && update.includes(after)) {
+            graph.get(before).push(after);
+            inDegree.set(after, inDegree.get(after) + 1);
+        }
+    }
+
+    const queue = [...inDegree.entries()].filter(([_, degree]) => degree === 0).map(([page]) => page);
+    const sorted = [];
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        sorted.push(current);
+
+        for (const neighbor of graph.get(current) || []) {
+            inDegree.set(neighbor, inDegree.get(neighbor) - 1);
+            if (inDegree.get(neighbor) === 0) {
+                queue.push(neighbor);
+            }
+        }
+    }
+
+    return sorted;
 }
 // #endregion
 
