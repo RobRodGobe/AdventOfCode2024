@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day5a(), day5b())
+    print(day6a(), day6b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -293,6 +293,107 @@ def correct_update(update, rules):
                 queue.append(neighbor)
 
     return sorted_update
+# endregion
+
+# region Day6
+def day6a():
+    file = readDayFile(6)
+    grid = [list(line.strip()) for line in file]
+    rows, cols = len(grid), len(grid[0])
+
+    directions = {"^": (-1, 0), ">": (0, 1), "v": (1, 0), "<": (0, -1)}
+    turn_right = {"^": ">", ">": "v", "v": "<", "<": "^"}
+
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] in directions:
+                guard_pos = (r, c)
+                guard_dir = grid[r][c]
+                break
+
+    visited = set()
+    visited.add(guard_pos)
+
+    while True:
+        dy, dx = directions[guard_dir]
+        next_pos = (guard_pos[0] + dy, guard_pos[1] + dx)
+
+        if not (0 <= next_pos[0] < rows and 0 <= next_pos[1] < cols):
+            break
+
+        if grid[next_pos[0]][next_pos[1]] == "#":
+            guard_dir = turn_right[guard_dir]
+        else:
+            guard_pos = next_pos
+            visited.add(guard_pos)
+
+    return len(visited)
+
+def day6b():
+    file = readDayFile(6)
+    grid = [list(line.strip()) for line in file]
+    rows, cols = len(grid), len(grid[0])
+
+    directions = {"^": (-1, 0), ">": (0, 1), "v": (1, 0), "<": (0, -1)}
+
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] in directions:
+                guard_pos = (r, c)
+                guard_dir = grid[r][c]
+                break
+
+    loop_positions = 0
+
+    for r in range(rows):
+        for c in range(cols):
+            if is_guard_in_loop(grid, guard_pos, guard_dir, (r, c)):
+                loop_positions += 1
+
+    return loop_positions
+
+def is_guard_in_loop(map_lines, guard_start, guard_dir, obstruction):
+    directions = {'^': (-1, 0), '>': (0, 1), 'v': (1, 0), '<': (0, -1)}
+    turn_right = {'^': '>', '>': 'v', 'v': '<', '<': '^'}
+
+    rows, cols = len(map_lines), len(map_lines[0])
+    guard_pos = guard_start
+    current_dir = guard_dir
+
+    temp_map = [list(row) for row in map_lines]
+    temp_map[obstruction[0]][obstruction[1]] = '#'
+
+    visited_states = set()
+    recent_history = []
+    max_history_length = 10
+
+    steps = 0
+    max_steps = rows * cols * 2
+
+    while True:
+        state = (guard_pos, current_dir)
+        if state in visited_states:
+            if state in recent_history:
+                return True
+
+        visited_states.add(state)
+        recent_history.append(state)
+        if len(recent_history) > max_history_length:
+            recent_history.pop(0)
+
+        dx, dy = directions[current_dir]
+        next_pos = (guard_pos[0] + dx, guard_pos[1] + dy)
+        
+        if (next_pos[0] < 0 or next_pos[0] >= rows or next_pos[1] < 0 or next_pos[1] >= cols):
+            return False
+        elif temp_map[next_pos[0]][next_pos[1]] == '#':
+            current_dir = turn_right[current_dir]
+        else:
+            guard_pos = next_pos
+
+        steps += 1
+        if steps > max_steps:
+            return True
 # endregion
 
 if __name__ == "__main__":

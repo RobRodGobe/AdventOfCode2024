@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day5a())
-	fmt.Println(day5b())
+	fmt.Println(day6a())
+	fmt.Println(day6b())
 }
 
 // region Day1
@@ -456,6 +456,161 @@ func parseFile() ([][2]int, [][]int) {
 
 	return rules, updates
 }
+
+// endregion
+
+// region Day6
+func day6a() int {
+	file := strings.Split(readDayFile(6), "\n")
+	rows := len(file)
+	cols := len(file[0])
+
+	directions := map[rune][2]int{
+		'^': {-1, 0},
+		'>': {0, 1},
+		'v': {1, 0},
+		'<': {0, -1},
+	}
+
+	turnRight := map[rune]rune{
+		'^': '>',
+		'>': 'v',
+		'v': '<',
+		'<': '^',
+	}
+
+	// Find the guard's starting position and direction
+	var guardPos [2]int
+	var guardDir rune
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			if _, exists := directions[rune(file[r][c])]; exists {
+				guardPos = [2]int{r, c}
+				guardDir = rune(file[r][c])
+				break
+			}
+		}
+	}
+
+	visited := make(map[[2]int]bool)
+	visited[guardPos] = true
+
+	for {
+		dy, dx := directions[guardDir][0], directions[guardDir][1]
+		nextPos := [2]int{guardPos[0] + dy, guardPos[1] + dx}
+
+		// Check if out of bounds
+		if nextPos[0] < 0 || nextPos[0] >= rows || nextPos[1] < 0 || nextPos[1] >= cols {
+			break
+		}
+
+		// Check if there's an obstacle
+		if file[nextPos[0]][nextPos[1]] == '#' {
+			// Turn right
+			guardDir = turnRight[guardDir]
+		} else {
+			// Move forward
+			guardPos = nextPos
+			visited[guardPos] = true
+		}
+	}
+
+	return len(visited)
+}
+
+func day6b() int {
+	file := strings.Split(readDayFile(6), "\n")
+	rows := len(file)
+	cols := len(file[0])
+
+	directions := map[rune][2]int{
+		'^': {-1, 0},
+		'>': {0, 1},
+		'v': {1, 0},
+		'<': {0, -1},
+	}
+
+	// Find the guard's starting position and direction
+	var guardPos [2]int
+	var guardDir rune
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			if _, exists := directions[rune(file[r][c])]; exists {
+				guardPos = [2]int{r, c}
+				guardDir = rune(file[r][c])
+				break
+			}
+		}
+	}
+
+	loopPositions := 0
+
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			obstacle := [2]int{r, c}
+			if isGuardInLoop(file, guardPos, byte(guardDir), obstacle) {
+				loopPositions++
+			}
+		}
+	}
+
+	return loopPositions
+}
+
+func isGuardInLoop(mapLines []string, guardStart [2]int, guardDir byte, obstruction [2]int) bool {
+	directions := map[byte][2]int{'^': {-1, 0}, '>': {0, 1}, 'v': {1, 0}, '<': {0, -1}}
+	turnRight := map[byte]byte{'^': '>', '>': 'v', 'v': '<', '<': '^'}
+
+	rows, cols := len(mapLines), len(mapLines[0])
+	guardPos := guardStart
+	currentDir := guardDir
+
+	tempMap := make([][]byte, rows)
+	for i := range mapLines {
+		tempMap[i] = []byte(mapLines[i])
+	}
+	tempMap[obstruction[0]][obstruction[1]] = '#'
+
+	visitedStates := make(map[[3]int]bool)
+	recentHistory := make([][3]int, 0)
+	maxHistoryLength := 10
+
+	steps, maxSteps := 0, rows*cols*2
+
+	for {
+		state := [3]int{guardPos[0], guardPos[1], int(currentDir)}
+		if visitedStates[state] {
+			for _, s := range recentHistory {
+				if s == state {
+					return true
+				}
+			}
+		}
+
+		visitedStates[state] = true
+		recentHistory = append(recentHistory, state)
+		if len(recentHistory) > maxHistoryLength {
+			recentHistory = recentHistory[1:]
+		}
+
+		dx, dy := directions[currentDir][0], directions[currentDir][1]
+		nextPos := [2]int{guardPos[0] + dx, guardPos[1] + dy}
+
+		if nextPos[0] < 0 || nextPos[0] >= rows || nextPos[1] < 0 || nextPos[1] >= cols {
+			return false
+		} else if tempMap[nextPos[0]][nextPos[1]] == '#' {
+			currentDir = turnRight[currentDir]
+		} else {
+			guardPos = nextPos
+		}
+
+		steps++
+		if steps > maxSteps {
+			return true
+		}
+	}
+}
+
 // endregion
 
 func readDayFile(day int32) string {

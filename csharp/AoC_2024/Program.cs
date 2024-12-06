@@ -12,9 +12,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day5a());
+            Console.WriteLine(Day6a());
             /* Part b */
-            Console.WriteLine(Day5b());
+            Console.WriteLine(Day6b());
         }
 
         static string[] ReadDayFile(int day)
@@ -447,6 +447,184 @@ namespace AoC_2024
             }
 
             return sorted;
+        }
+
+        #endregion
+
+        #region Day6
+        static int Day6a()
+        {
+            string[] file = ReadDayFile(6);
+            int rows = file.Length;
+            int cols = file[0].Length;
+
+            Dictionary<char, (int, int)> directions = new Dictionary<char, (int, int)>
+            {
+                { '^', (-1, 0) },
+                { '>', (0, 1) },
+                { 'v', (1, 0) },
+                { '<', (0, -1) }
+            };
+
+            Dictionary<char, char> turnRight = new Dictionary<char, char>
+            {
+                { '^', '>' },
+                { '>', 'v' },
+                { 'v', '<' },
+                { '<', '^' }
+            };
+
+            (int Row, int Col) guardPos = (0, 0);
+            char guardDir = ' ';
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (directions.ContainsKey(file[r][c]))
+                    {
+                        guardPos = (r, c);
+                        guardDir = file[r][c];
+                        break;
+                    }
+                }
+            }
+
+            HashSet<(int, int)> visited = new HashSet<(int, int)> { guardPos };
+
+            while (true)
+            {
+                (int dy, int dx) = directions[guardDir];
+                var nextPos = (Row: guardPos.Row + dy, Col: guardPos.Col + dx);
+
+                if (nextPos.Row < 0 || nextPos.Row >= rows || nextPos.Col < 0 || nextPos.Col >= cols)
+                    break;
+
+                if (file[nextPos.Row][nextPos.Col] == '#')
+                {
+                    guardDir = turnRight[guardDir];
+                }
+                else
+                {
+                    guardPos = nextPos;
+                    visited.Add(guardPos);
+                }
+            }
+
+            return visited.Count;
+        }
+
+        static int Day6b()
+        {
+            string[] file = ReadDayFile(6);
+            int rows = file.Length;
+            int cols = file[0].Length;
+
+            Dictionary<char, (int, int)> directions = new Dictionary<char, (int, int)>
+            {
+                {'^', (-1, 0)},
+                {'>', (0, 1)},
+                {'v', (1, 0)},
+                {'<', (0, -1)}
+            };
+
+            (int x, int y) guardPos = (0, 0);
+            char guardDir = ' ';
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (directions.ContainsKey(file[r][c]))
+                    {
+                        guardPos = (r, c);
+                        guardDir = file[r][c];
+                        break;
+                    }
+                }
+            }
+
+            int loopPositions = 0;
+
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (IsGuardInLoop(file, guardPos, guardDir, (r, c)))
+                        loopPositions++;
+                }
+            }
+
+            return loopPositions;
+        }
+
+        static bool IsGuardInLoop(string[] mapLines, (int Row, int Col) guardStart, char guardDir, (int Row, int Col) obstruction)
+        {
+            Dictionary<char, (int, int)> directions = new()
+            {
+                { '^', (-1, 0) },
+                { '>', (0, 1) },
+                { 'v', (1, 0) },
+                { '<', (0, -1) }
+            };
+
+            Dictionary<char, char> turnRight = new()
+            {
+                { '^', '>' },
+                { '>', 'v' },
+                { 'v', '<' },
+                { '<', '^' }
+            };
+
+            int rows = mapLines.Length;
+            int cols = mapLines[0].Length;
+
+            // Add the obstruction
+            char[][] tempMap = mapLines.Select(row => row.ToCharArray()).ToArray();
+            tempMap[obstruction.Row][obstruction.Col] = '#';
+
+            (int Row, int Col) guardPos = guardStart;
+            char currentDir = guardDir;
+
+            HashSet<(int, int, char)> visitedStates = new();
+            Queue<(int, int, char)> recentHistory = new();
+
+            int steps = 0, maxSteps = rows * cols * 2;
+
+            while (true)
+            {
+                var state = (guardPos.Row, guardPos.Col, currentDir);
+
+                if (visitedStates.Contains(state))
+                {
+                    if (recentHistory.Contains(state))
+                        return true;
+                }
+
+                visitedStates.Add(state);
+                recentHistory.Enqueue(state);
+                if (recentHistory.Count > 10)
+                    recentHistory.Dequeue();
+
+                int dx = directions[currentDir].Item1;
+                int dy = directions[currentDir].Item2;
+                var nextPos = (Row: guardPos.Row + dx, Col: guardPos.Col + dy);
+
+                if (nextPos.Row < 0 || nextPos.Row >= rows || nextPos.Col < 0 || nextPos.Col >= cols)
+                {
+                    return false;
+                }
+                else if (tempMap[nextPos.Row][nextPos.Col] == '#')
+                {
+                    currentDir = turnRight[currentDir];
+                }
+                else
+                {
+                    guardPos = nextPos;
+                }
+
+                steps++;
+                if (steps > maxSteps)
+                    return true; // Assume infinite loop if guard doesn't leave in a reasonable number of steps
+            }
         }
 
         #endregion

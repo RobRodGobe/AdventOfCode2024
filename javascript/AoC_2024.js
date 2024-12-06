@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day5a(), day5b());
+    console.log(day6a(), day6b());
 }
 
 function readDayFile(day){
@@ -346,6 +346,146 @@ function correctUpdate(update, rules) {
     }
 
     return sorted;
+}
+// #endregion
+
+// #region Day5
+function day6a() {
+    const file = readDayFile(6).split("\n").map(line => line.trim());;
+    const rows = file.length;
+    const cols = file[0].length;
+
+    const directions = {
+        "^": [-1, 0],
+        ">": [0, 1],
+        "v": [1, 0],
+        "<": [0, -1]
+    };
+
+    const turnRight = {
+        "^": ">",
+        ">": "v",
+        "v": "<",
+        "<": "^"
+    };
+    
+    let guardPos = [0, 0];
+    let guardDir = "";
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (directions[file[r][c]]) {
+                guardPos = [r, c];
+                guardDir = file[r][c];
+                break;
+            }
+        }
+    }
+
+    const visited = new Set();
+    visited.add(`${guardPos[0]},${guardPos[1]}`);
+
+    while (true) {
+        const [dy, dx] = directions[guardDir];
+        const nextPos = [guardPos[0] + dy, guardPos[1] + dx];
+
+        if (nextPos[0] < 0 || nextPos[0] >= rows || nextPos[1] < 0 || nextPos[1] >= cols) {
+            break;
+        }
+
+        if (file[nextPos[0]][nextPos[1]] === "#") {
+            guardDir = turnRight[guardDir];
+        }
+        else {
+            guardPos = nextPos;
+            visited.add(`${guardPos[0]},${guardPos[1]}`);
+        }
+    }
+
+    return visited.size;
+}
+
+function day6b() {
+    const file = readDayFile(6).split("\n").map(line => line.trim());;
+    const rows = file.length;
+    const cols = file[0].length;
+
+    let guardPos = [0, 0];
+    let guardDir = "";
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if ("^>v<".includes(file[r][c])) {
+                guardPos = [r, c];
+                guardDir = file[r][c];
+            }
+        }
+    }
+
+    let loopPositions = 0;
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (isGuardInLoop(file, guardPos, guardDir,[r, c]))
+                loopPositions++;
+        }
+    }
+
+    return loopPositions;
+}
+
+function isGuardInLoop(mapLines, guardStart, guardDir, obstruction) {
+    const directions = { '^': [-1, 0], '>': [0, 1], 'v': [1, 0], '<': [0, -1] };
+    const turnRight = { '^': '>', '>': 'v', 'v': '<', '<': '^' };
+
+    const rows = mapLines.length;
+    const cols = mapLines[0].length;
+
+    // Add obstruction
+    const tempMap = mapLines.map(row => row.split(''));
+    tempMap[obstruction[0]][obstruction[1]] = '#';
+
+    let guardPos = guardStart;
+    let currentDir = guardDir;
+
+    const visitedStates = new Set();
+    const recentHistory = [];
+    const maxHistoryLength = 10;
+
+    let steps = 0;
+    const maxSteps = rows * cols * 2;
+
+    while (true) {
+        const state = `${guardPos[0]},${guardPos[1]},${currentDir}`;
+        if (visitedStates.has(state)) {
+            if (recentHistory.includes(state)) {
+                return true;
+            }
+        }
+
+        visitedStates.add(state);
+        recentHistory.push(state);
+        if (recentHistory.length > maxHistoryLength) {
+            recentHistory.shift();
+        }
+
+        const [dx, dy] = directions[currentDir];
+        const nextPos = [guardPos[0] + dx, guardPos[1] + dy];
+
+        if (nextPos[0] < 0 || nextPos[0] >= rows || nextPos[1] < 0 || nextPos[1] >= cols) {
+            return false;
+        }
+        else if (tempMap[nextPos[0]][nextPos[1]] === '#') {
+            currentDir = turnRight[currentDir];
+        } else {
+            guardPos = nextPos;
+        }
+
+        steps++;
+        if (steps > maxSteps) {
+            return true;
+        }
+    }
 }
 // #endregion
 
