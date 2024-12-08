@@ -12,9 +12,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day6a());
+            Console.WriteLine(Day7a());
             /* Part b */
-            Console.WriteLine(Day6b());
+            Console.WriteLine(Day7b());
         }
 
         static string[] ReadDayFile(int day)
@@ -627,6 +627,71 @@ namespace AoC_2024
             }
         }
 
+        #endregion
+    
+        #region Day7
+        static long Day7a() {
+            string[] file = ReadDayFile(7);
+            long sum = 0;
+
+            for (int i = 0; i < file.Length; i++)
+            {                
+                string[] nums = file[i].Split(":");
+                long total = long.Parse(nums[0]);
+                long[] factors = nums[1].Trim().Split(" ").Select(long.Parse).ToArray();                
+                if (CanCalibrate(total, factors, factors[0], 1))
+                    sum += total;
+            }
+
+            return sum;
+        }
+
+        static long Day7b() {
+            string[] file = ReadDayFile(7);
+            long sum = 0;
+
+            for (int i = 0; i < file.Length; i++)
+            {                
+                string[] nums = file[i].Split(":");
+                long total = long.Parse(nums[0]);
+                long[] factors = nums[1].Trim().Split(" ").Select(long.Parse).ToArray();                
+                if (CanCalibrate2(total, factors, factors[0], 1))
+                    sum += total;
+            }
+
+            return sum;
+        }
+
+        static bool CanCalibrate(long target, long[] numbers, long current, int i)
+        {
+            if (i == numbers.Count())
+                return current == target;
+
+            if (CanCalibrate(target, numbers, current + numbers[i], i + 1))
+                return true;
+
+            if (CanCalibrate(target, numbers, current * numbers[i], i + 1))
+                return true;
+
+            return false;
+        }
+
+        static bool CanCalibrate2(long target, long[] numbers, long current, int i)
+        {
+            if (i == numbers.Count())
+                return current == target;
+
+            if (CanCalibrate2(target, numbers, current + numbers[i], i + 1))
+                return true;
+
+            if (CanCalibrate2(target, numbers, current * numbers[i], i + 1))
+                return true;
+
+            if (CanCalibrate2(target, numbers, long.Parse($"{current}{numbers[i]}"), i + 1))
+                return true;
+
+            return false;
+        }
         #endregion
     }
 }

@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day6a(), day6b());
+    console.log(day7a(), day7b());
 }
 
 function readDayFile(day){
@@ -349,7 +349,7 @@ function correctUpdate(update, rules) {
 }
 // #endregion
 
-// #region Day5
+// #region Day6
 function day6a() {
     const file = readDayFile(6).split("\n").map(line => line.trim());;
     const rows = file.length;
@@ -486,6 +486,74 @@ function isGuardInLoop(mapLines, guardStart, guardDir, obstruction) {
             return true;
         }
     }
+}
+// #endregion
+
+// #region Day7
+function day7a() {
+    const file = readDayFile(7).split("\n");
+    let sum = 0;
+
+    for (let i = 0; i < file.length; i++) {
+        const nums = file[i].split(":");
+        const total = nums[0];
+        const factors = nums[1].trim().split(" ").map(Number);
+        if (canCalibrate(total, factors, factors[0], 1))
+            sum += parseInt(total);
+    }
+    
+    return sum;
+}
+
+function day7b() {
+    const file = readDayFile(7).split("\n");
+    let sum = 0;
+
+    for (let i = 0; i < file.length; i++) {
+        const nums = file[i].split(":");
+        const total = nums[0];
+        const factors = nums[1].trim().split(" ").map(Number);
+        if (canCalibrate2(total, factors, factors[0], 1))
+            sum += parseInt(total);
+    }
+    
+    return sum;
+}
+
+function canCalibrate(target, numbers, current, i) {
+    if (i === numbers.length) {
+        return parseInt(current) === parseInt(target);
+    }
+
+    if (canCalibrate(target, numbers, current + numbers[i], i + 1)) {
+        return true;
+    }
+
+    if (canCalibrate(target, numbers, current * numbers[i], i + 1)) {
+        return true;
+    }
+    
+    return false;
+}
+
+function canCalibrate2(target, numbers, current, i) {
+    if (i === numbers.length) {
+        return parseInt(current) === parseInt(target);
+    }
+
+    if (canCalibrate2(target, numbers, current + numbers[i], i + 1)) {
+        return true;
+    }
+
+    if (canCalibrate2(target, numbers, current * numbers[i], i + 1)) {
+        return true;
+    }
+
+    if (canCalibrate2(target, numbers, parseInt(`${current}${numbers[i]}`), i + 1)) {
+        return true;
+    }
+    
+    return false;
 }
 // #endregion
 

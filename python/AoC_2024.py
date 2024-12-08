@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day6a(), day6b())
+    print(day7a(), day7b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -394,6 +394,61 @@ def is_guard_in_loop(map_lines, guard_start, guard_dir, obstruction):
         steps += 1
         if steps > max_steps:
             return True
+# endregion
+
+# region Day7
+def day7a():
+    file = readDayFile(7)
+    sum = 0
+
+    for line in file:
+        nums = line.split(":")
+        total = nums[0]
+        factors = list(map(int, nums[1].strip().split()))
+        if can_calibrate(total, factors, factors[0], 1):
+            sum += int(total.strip())
+
+    return sum
+
+def day7b():
+    file = readDayFile(7)
+    sum = 0
+
+    for line in file:
+        nums = line.split(":")
+        total = nums[0]
+        factors = list(map(int, nums[1].strip().split()))
+        if can_calibrate_2(total, factors, factors[0], 1):
+            sum += int(total.strip())
+
+    return sum
+
+def can_calibrate(target, numbers, current, i):
+    if i == len(numbers):
+        return int(current) == int(target)
+    
+    if can_calibrate(target, numbers, current + numbers[i], i + 1):
+        return True
+    
+    if can_calibrate(target, numbers, current * numbers[i], i + 1):
+        return True
+    
+    return False
+
+def can_calibrate_2(target, numbers, current, i):
+    if i == len(numbers):
+        return int(current) == int(target)
+    
+    if can_calibrate_2(target, numbers, current + numbers[i], i + 1):
+        return True
+    
+    if can_calibrate_2(target, numbers, current * numbers[i], i + 1):
+        return True
+    
+    if can_calibrate_2(target, numbers, int(f"{current}{numbers[i]}"), i + 1):
+        return True
+    
+    return False
 # endregion
 
 if __name__ == "__main__":

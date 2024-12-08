@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day6a())
-	fmt.Println(day6b())
+	fmt.Println(day7a())
+	fmt.Println(day7b())
 }
 
 // region Day1
@@ -609,6 +609,91 @@ func isGuardInLoop(mapLines []string, guardStart [2]int, guardDir byte, obstruct
 			return true
 		}
 	}
+}
+
+// endregion
+
+// region Day6
+func day7a() int {
+	file := strings.Split(readDayFile(7), "\n")
+	sum := 0
+
+	for _, line := range file {
+		parts := strings.Split(line, ":")
+		target, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+		numberParts := strings.Fields(strings.TrimSpace(parts[1]))
+
+		numbers := make([]int, len(numberParts))
+		for i, numStr := range numberParts {
+			numbers[i], _ = strconv.Atoi(numStr)
+		}
+
+		if canAchieveTarget(target, numbers, numbers[0], 1) {
+			sum += target
+		}
+	}
+
+	return sum
+}
+
+func day7b() int {
+	file := strings.Split(readDayFile(7), "\n")
+	sum := 0
+
+	for _, line := range file {
+		parts := strings.Split(line, ":")
+		target, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+		numberParts := strings.Fields(strings.TrimSpace(parts[1]))
+
+		numbers := make([]int, len(numberParts))
+		for i, numStr := range numberParts {
+			numbers[i], _ = strconv.Atoi(numStr)
+		}
+
+		if canAchieveTarget2(target, numbers, numbers[0], 1) {
+			sum += target
+		}
+	}
+
+	return sum
+}
+
+func canAchieveTarget(target int, numbers []int, currentValue, index int) bool {
+	if index == len(numbers) {
+		return currentValue == target
+	}
+
+	if canAchieveTarget(target, numbers, currentValue+numbers[index], index+1) {
+		return true
+	}
+
+	if canAchieveTarget(target, numbers, currentValue*numbers[index], index+1) {
+		return true
+	}
+
+	return false
+}
+
+func canAchieveTarget2(target int, numbers []int, currentValue, index int) bool {
+	if index == len(numbers) {
+		return currentValue == target
+	}
+
+	if canAchieveTarget2(target, numbers, currentValue+numbers[index], index+1) {
+		return true
+	}
+
+	if canAchieveTarget2(target, numbers, currentValue*numbers[index], index+1) {
+		return true
+	}
+
+	concatenated, _ := strconv.Atoi(fmt.Sprintf("%v%v", currentValue, numbers[index]))
+
+	if canAchieveTarget2(target, numbers, concatenated, index+1) {
+		return true
+	}
+
+	return false
 }
 
 // endregion
