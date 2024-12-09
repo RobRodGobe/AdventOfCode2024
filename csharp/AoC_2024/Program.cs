@@ -12,9 +12,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day7a());
+            Console.WriteLine(Day8a());
             /* Part b */
-            Console.WriteLine(Day7b());
+            Console.WriteLine(Day8b());
         }
 
         static string[] ReadDayFile(int day)
@@ -79,7 +79,7 @@ namespace AoC_2024
 
         #endregion
 
-        #region Day2        
+        #region Day2
         static int Day2a()
         {
             string[] file = ReadDayFile(2);
@@ -691,6 +691,154 @@ namespace AoC_2024
                 return true;
 
             return false;
+        }
+        #endregion
+    
+        #region Day8
+        static int Day8a()
+        {
+            string[] file = ReadDayFile(8);
+            List<List<char>> matrix = file.Select(line => line.ToCharArray().ToList()).ToList();
+
+            Dictionary<char, List<(int x, int y)>> antennaMap = GetAntennaMap(matrix);
+
+            List<(int, int)> allAntinodes = new List<(int, int)>();
+
+            foreach (var coords in antennaMap.Values)
+            {
+                List<(int x, int y)> antinodes = GetAntinodes(coords, matrix);
+                allAntinodes.AddRange(antinodes);
+            }
+
+            List<(int x, int y)> uniqueAntinodes = GetUniqueAntinodes(allAntinodes);
+
+            return uniqueAntinodes.Count();
+        }
+
+        static int Day8b()
+        {
+            string[] file = ReadDayFile(8);
+            List<List<char>> matrix = file.Select(line => line.ToCharArray().ToList()).ToList();
+
+            Dictionary<char, List<(int x, int y)>> antennaMap = GetAntennaMap(matrix);
+
+            bool[,] antinodeMatrix = new bool[matrix.Count, matrix[0].Count()];
+
+            foreach (var coords in antennaMap.Values)
+            {
+                ProcessAntinodeLines(coords, matrix, antinodeMatrix);
+            }
+
+            return GetUniqueAntinodesCount(antinodeMatrix);
+        }
+
+        static Dictionary<char, List<(int x, int y)>> GetAntennaMap(List<List<char>> matrix)
+        {
+            var map = new Dictionary<char, List<(int x, int y)>>();
+
+            for (int i = 0; i < matrix.Count(); i++)
+            {
+                for (int j = 0; j < matrix[i].Count(); j++)
+                {
+                    char cell = matrix[i][j];
+                    if (cell != '.')
+                    {
+                        if (!map.ContainsKey(cell))
+                            map[cell] = new List<(int x, int y)>();
+
+                        map[cell].Add((i, j));
+                    }
+                }
+            }
+
+            return map;
+        }
+
+        static List<(int x, int y)> GetAntinodes(List<(int x, int y)> coords, List<List<char>> matrix)
+        {
+            List<(int x, int y)> antinodes = new List<(int x, int y)>();
+
+            for (int i = 0; i < coords.Count(); i++)
+            {
+                for (int j = 0; j < coords.Count(); j++)
+                {
+                    if (i != j)
+                    {
+                        var (ax, ay) = coords[i];
+                        var (bx, by) = coords[j];
+
+                        int cx = 2 * bx - ax;
+                        int cy = 2 * by - ay;
+
+                        if (WithinBoundaries(cx, 0, matrix.Count) && WithinBoundaries(cy, 0, matrix[0].Count))
+                        {
+                            antinodes.Add((cx, cy));
+                        }
+                    }
+                }
+            }
+
+            return antinodes;
+        }
+
+        static bool WithinBoundaries(int value, int min, int max)
+        {
+            return value >= min && value < max;
+        }
+
+        static List<(int x, int y)> GetUniqueAntinodes(List<(int x, int y)> antinodes)
+        {
+            HashSet<(int, int)> uniqueSet = new HashSet<(int, int)>(antinodes);
+            return uniqueSet.ToList();
+        }
+
+        static void ProcessAntinodeLines(List<(int x, int y)> coords, List<List<char>> matrix, bool[,] antinodeMatrix)
+        {
+            for (int i = 0; i < coords.Count(); i++)
+            {
+                for (int j = 0; j < coords.Count(); j++)
+                {
+                    if (i != j)
+                    {
+                        var (x1, y1) = coords[i];
+                        var (x2, y2) = coords[j];
+
+                        for (int x = 0; x < matrix.Count(); x++)
+                        {
+                            for (int y = 0; y < matrix[0].Count(); y++)
+                            {
+                                if (!antinodeMatrix[x, y])
+                                {
+                                    int lineResult = (y1 - y2) * x + (x2 - x1) * y + (x1 * y2 - x2 * y1);
+
+                                    if (lineResult == 0)
+                                    {
+                                        antinodeMatrix[x, y] = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        static int GetUniqueAntinodesCount(bool[,] antinodeMatrix)
+        {
+            int count = 0;
+
+            for (int x = 0; x < antinodeMatrix.GetLength(0); x++)
+            {
+                for (int y = 0; y < antinodeMatrix.GetLength(1); y++)
+                {
+                    if (antinodeMatrix[x, y])
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
         }
         #endregion
     }

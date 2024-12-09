@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day7a(), day7b());
+    console.log(day8a(), day8b());
 }
 
 function readDayFile(day){
@@ -554,6 +554,119 @@ function canCalibrate2(target, numbers, current, i) {
     }
     
     return false;
+}
+// #endregion
+
+// #region Day8
+function day8a() {
+    const file = readDayFile(8).split("\n");
+    const matrix = file.map(line => line.split(''));
+
+    const antennaMap = getAntennaMap(matrix);
+
+    const allAntinodes = [];
+
+    Object.values(antennaMap).forEach(coords => {
+        const antinodes = getAntinodes(coords, matrix);
+        allAntinodes.push(...antinodes);
+    });
+
+    const uniqueAntinodes = getUniqueAntinodes(allAntinodes);
+
+    return uniqueAntinodes.length;
+}
+
+function day8b() {
+    const file = readDayFile(8).split("\n");
+    const matrix = file.map(line => line.split(''));
+
+    const antennaMap = getAntennaMap(matrix);
+
+    const antinodeMatrix = Array.from({ length: matrix.length }, () => Array(matrix[0].length).fill(false));
+
+    for (const coords of Object.values(antennaMap)) {
+        processAntinodeLines(coords, matrix, antinodeMatrix);
+    }
+
+    return getUniqueAntinodesCount(antinodeMatrix);
+}
+
+function getAntennaMap(matrix) {
+    const map = {};
+    for (let i = 0; i < matrix.length; i++) {
+        for (let j = 0; j < matrix[i].length; j++) {
+            const cell = matrix[i][j];
+            if (cell !== '.') {
+                if (!map[cell]) map[cell] = [];
+                map[cell].push({ x: i, y: j });
+            }
+        }
+    }
+    return map;
+}
+
+function getAntinodes(coords, matrix) {
+    const antinodes = [];
+    for (let i = 0; i < coords.length; i++) {
+        for (let j = 0; j < coords.length; j++) {
+            if (i !== j) {
+                const { x: ax, y: ay } = coords[i];
+                const { x: bx, y: by } = coords[j];
+
+                const cx = 2 * bx - ax;
+                const cy = 2 * by - ay;
+
+                if (withinBoundaries(cx, 0, matrix.length) && withinBoundaries(cy, 0, matrix[0].length)) {
+                    antinodes.push({ x: cx, y: cy });
+                }
+            }
+        }
+    }
+    return antinodes;
+}
+
+function withinBoundaries(value, min, max) {
+    return value >= min && value < max;
+}
+
+function getUniqueAntinodes(antinodes) {
+    const uniqueSet = new Set(antinodes.map(({ x, y }) => `${x}:${y}`));
+    return Array.from(uniqueSet).map(key => {
+        const [x, y] = key.split(':').map(Number);
+        return { x, y };
+    });
+}
+
+function processAntinodeLines(coords, matrix, antinodeMatrix) {
+    for (let i = 0; i < coords.length; i++) {
+        for (let j = 0; j < coords.length; j++) {
+            if (i !== j) {
+                const { x: x1, y: y1 } = coords[i];
+                const { x: x2, y: y2 } = coords[j];
+
+                for (let x = 0; x < matrix.length; x++) {
+                    for (let y = 0; y < matrix[0].length; y++) {
+                        if (!antinodeMatrix[x][y]) {
+                            const lineResult = (y1 - y2) * x + (x2 - x1) * y + (x1 * y2 - x2 * y1);
+                            if (lineResult === 0) {
+                                antinodeMatrix[x][y] = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+function getUniqueAntinodesCount(antinodeMatrix) {
+    let count = 0;
+    for (const row of antinodeMatrix) {
+        for (const cell of row) {
+            if (cell) count++;
+        }
+    }
+    return count;
 }
 // #endregion
 

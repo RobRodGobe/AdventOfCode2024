@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day7a())
-	fmt.Println(day7b())
+	fmt.Println(day8a())
+	fmt.Println(day8b())
 }
 
 // region Day1
@@ -613,7 +613,7 @@ func isGuardInLoop(mapLines []string, guardStart [2]int, guardDir byte, obstruct
 
 // endregion
 
-// region Day6
+// region Day7
 func day7a() int {
 	file := strings.Split(readDayFile(7), "\n")
 	sum := 0
@@ -694,6 +694,155 @@ func canAchieveTarget2(target int, numbers []int, currentValue, index int) bool 
 	}
 
 	return false
+}
+
+// endregion
+
+// region Day8
+type coordinate struct {
+	x, y int
+}
+
+func day8a() int {
+	file := strings.Split(readDayFile(8), "\n")
+
+	var matrix [][]rune
+	for _, line := range file {
+		matrix = append(matrix, []rune(line))
+	}
+
+	antennaMap := getAntennaMap(matrix)
+
+	var allAntinodes [][2]int
+
+	for _, coords := range antennaMap {
+		antinodes := getAntinodes(coords, matrix)
+		allAntinodes = append(allAntinodes, antinodes...)
+	}
+
+	uniqueAntinodes := getUniqueAntinodes(allAntinodes)
+
+	return len(uniqueAntinodes)
+}
+
+func day8b() int {
+	file := strings.Split(readDayFile(8), "\n")
+
+	var matrix [][]rune
+	for _, line := range file {
+		matrix = append(matrix, []rune(line))
+	}
+
+	antennaMap := getAntennaMap(matrix)
+
+	antinodeMatrix := make([][]bool, len(file))
+	for i := range file {
+		antinodeMatrix[i] = make([]bool, len(file[0]))
+	}
+
+	for _, coords := range antennaMap {
+		convertedCoords := make([]coordinate, len(coords))
+		for i, coord := range coords {
+			convertedCoords[i] = coordinate{x: coord[0], y: coord[1]}
+		}
+		processAntinodeLines(convertedCoords, matrix, antinodeMatrix)
+	}
+
+	return getUniqueAntinodesCount(antinodeMatrix)
+}
+
+func withinBoundaries(value, min, max int) bool {
+	return value >= min && value < max
+}
+
+func getAntennaMap(matrix [][]rune) map[rune][][2]int {
+	antennaMap := make(map[rune][][2]int)
+
+	for i := 0; i < len(matrix); i++ {
+		for j := 0; j < len(matrix[i]); j++ {
+			cell := matrix[i][j]
+			if cell == '.' {
+				continue
+			}
+
+			antennaMap[cell] = append(antennaMap[cell], [2]int{i, j})
+		}
+	}
+
+	return antennaMap
+}
+
+func getAntinodes(coords [][2]int, matrix [][]rune) [][2]int {
+	var antinodes [][2]int
+
+	for i := 0; i < len(coords); i++ {
+		for j := 0; j < len(coords); j++ {
+			if i == j {
+				continue
+			}
+
+			ax, ay := coords[i][0], coords[i][1]
+			bx, by := coords[j][0], coords[j][1]
+
+			cx := 2*bx - ax
+			cy := 2*by - ay
+
+			if withinBoundaries(cx, 0, len(matrix)) && withinBoundaries(cy, 0, len(matrix[0])) {
+				antinodes = append(antinodes, [2]int{cx, cy})
+			}
+		}
+	}
+
+	return antinodes
+}
+
+func getUniqueAntinodes(antinodes [][2]int) [][2]int {
+	uniqueSet := make(map[[2]int]bool)
+
+	for _, antinode := range antinodes {
+		uniqueSet[antinode] = true
+	}
+
+	var uniqueAntinodes [][2]int
+	for antinode := range uniqueSet {
+		uniqueAntinodes = append(uniqueAntinodes, antinode)
+	}
+
+	return uniqueAntinodes
+}
+
+func processAntinodeLines(coords []coordinate, matrix [][]rune, antinodeMatrix [][]bool) {
+	for i, c1 := range coords {
+		for j, c2 := range coords {
+			if i != j {
+				x1, y1 := c1.x, c1.y
+				x2, y2 := c2.x, c2.y
+
+				for x := 0; x < len(matrix); x++ {
+					for y := 0; y < len(matrix[0]); y++ {
+						if !antinodeMatrix[x][y] {
+							lineResult := (y1-y2)*x + (x2-x1)*y + (x1*y2 - x2*y1)
+							if lineResult == 0 {
+								antinodeMatrix[x][y] = true
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func getUniqueAntinodesCount(antinodeMatrix [][]bool) int {
+	count := 0
+	for _, row := range antinodeMatrix {
+		for _, cell := range row {
+			if cell {
+				count++
+			}
+		}
+	}
+	return count
 }
 
 // endregion

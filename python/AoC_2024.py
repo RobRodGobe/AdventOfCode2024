@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day7a(), day7b())
+    print(day8a(), day8b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -449,6 +449,83 @@ def can_calibrate_2(target, numbers, current, i):
         return True
     
     return False
+# endregion
+
+# region Day8
+def day8a():
+    file = readDayFile(8)
+    matrix = [list(line.strip()) for line in file]
+
+    antenna_map = get_antenna_map(matrix)
+
+    all_antinodes = []
+
+    for coords in antenna_map.values():
+        antinodes = get_antinodes(coords, matrix)
+        all_antinodes.extend(antinodes)
+
+    unique_antinodes = get_unique_antinodes(all_antinodes)
+
+    return len(unique_antinodes)
+
+def day8b():
+    file = readDayFile(8)
+    matrix = [list(line.strip()) for line in file]
+
+    antenna_map = get_antenna_map(matrix)
+    antinode_matrix = [[False] * len(matrix[0]) for _ in range(len(matrix))]
+
+    for coords in antenna_map.values():
+        process_antinode_lines(coords, matrix, antinode_matrix)
+
+    return get_unique_antinodes_count(antinode_matrix)
+
+def get_antenna_map(matrix):
+    antenna_map = {}
+    for i, row in enumerate(matrix):
+        for j, cell in enumerate(row):
+            if cell != '.':
+                if cell not in antenna_map:
+                    antenna_map[cell] = []
+                antenna_map[cell].append((i, j))
+    return antenna_map
+
+def get_antinodes(coords, matrix):
+    antinodes = []
+
+    for i, (ax, ay) in enumerate(coords):
+        for j, (bx, by) in enumerate(coords):
+            if i != j:
+                cx, cy = 2 * bx - ax, 2 * by - ay
+
+                if within_boundaries(cx, 0, len(matrix)) and within_boundaries(cy, 0, len(matrix[0])):
+                    antinodes.append((cx, cy))
+
+    return antinodes
+
+def within_boundaries(value, min_value, max_value):
+    return min_value <= value < max_value
+
+def get_unique_antinodes(antinodes):
+    return list(set(antinodes))
+
+def process_antinode_lines(coords, matrix, antinode_matrix):
+    for i, (x1, y1) in enumerate(coords):
+        for j, (x2, y2) in enumerate(coords):
+            if i != j:
+                for x in range(len(matrix)):
+                    for y in range(len(matrix[0])):
+                        if not antinode_matrix[x][y]:
+                            line_result = (y1 - y2) * x + (x2 - x1) * y + (x1 * y2 - x2 * y1)
+                            if line_result == 0:
+                                antinode_matrix[x][y] = True
+
+def get_unique_antinodes_count(antinode_matrix):
+    count = 0
+    for row in antinode_matrix:
+        count += sum(row)
+    return count
+
 # endregion
 
 if __name__ == "__main__":
