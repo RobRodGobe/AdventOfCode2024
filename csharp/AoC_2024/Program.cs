@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace AoC_2024
@@ -12,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day8a());
+            Console.WriteLine(Day9a());
             /* Part b */
-            Console.WriteLine(Day8b());
+            Console.WriteLine(Day9b());
         }
 
         static string[] ReadDayFile(int day)
@@ -840,6 +841,200 @@ namespace AoC_2024
 
             return count;
         }
+        #endregion
+    
+        #region Day9
+        static long Day9a()
+        {
+            string[] file = ReadDayFile(9);
+            string line = file[0];
+
+            List<string> diskMap = ParseDiskMap(line);
+            
+            diskMap = CompactDisk(diskMap);
+
+            return CalculateChecksum(diskMap);
+        }
+
+        static long Day9b()
+        {
+            string[] file = ReadDayFile(9);
+            string line = file[0];
+
+            List<string> diskMap = ParseDiskMap(line);
+
+            diskMap = CompactDiskByFile(diskMap);
+
+            return CalculateChecksum(diskMap);
+        }
+
+        static List<string> ParseDiskMap(string line)
+        {
+            List<string> nums = new List<string>();
+            int index = 0;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                int count = line[i] - '0';
+                if (i % 2 == 0)
+                {
+                    for (int j = 0; j < count; j++)
+                    {
+                        nums.Add(index.ToString());
+                    }
+                    index++;
+                }
+                else
+                {
+                    for (int j = 0; j < count; j++)
+                    {
+                        nums.Add(".");
+                    }
+                }
+            }
+
+            return nums;
+        }
+
+        static List<string> CompactDisk(List<string> diskMap)
+        {
+            int L = 0;
+            int R = diskMap.Count() - 1;
+
+            while (L <= R)
+            {
+                if (diskMap[L] == "." && diskMap[R] != ".")
+                {
+                    string temp = diskMap[L];
+                    diskMap[L] = diskMap[R];
+                    diskMap[R] = temp;
+                    R--;
+                    L++;
+                }
+                else if (diskMap[R] == ".")
+                    R--;
+                else
+                    L++;
+            }
+
+            return diskMap;
+        }
+
+        static long CalculateChecksum(List<string> diskMap)
+        {
+            long checksum = 0;
+
+            for (int i = 0; i < diskMap.Count(); i++)
+            {
+                if (diskMap[i] != ".")
+                {
+                    checksum += i * (long.Parse(diskMap[i]));
+                }
+            }
+
+            return checksum;
+        }
+
+        class DiskFile
+        {
+            public int Id { get; set; }
+            public int Length { get; set; }
+            public int StartIdx { get; set; }
+
+            public DiskFile(int id, int length, int startIdx)
+            {
+                Id = id;
+                Length = length;
+                StartIdx = startIdx;
+            }
+        }
+
+        static (List<DiskFile> files, Dictionary<int, int> spaces) AnalyzeDisk(List<string> diskMap)
+        {
+            var files = new List<DiskFile>();
+            var spaces = new Dictionary<int, int>();
+            int spaceStartIdx = -1;
+
+            for (int i = 0; i < diskMap.Count; i++)
+            {
+                if (diskMap[i] == ".")
+                {
+                    if (spaceStartIdx == -1)
+                        spaceStartIdx = i;
+
+                    if (!spaces.ContainsKey(spaceStartIdx))
+                        spaces[spaceStartIdx] = 0;
+
+                    spaces[spaceStartIdx]++;
+                }
+                else
+                {
+                    if (spaceStartIdx != -1)
+                        spaceStartIdx = -1;
+
+                    int fileId = int.Parse(diskMap[i]);
+                    if (files.Count <= fileId)
+                        files.Add(new DiskFile(fileId, 0, i));
+
+                    files[fileId].Length++;
+                }
+            }
+
+            return (files, spaces);
+        }
+
+        static int GetFirstAvailableSpaceIdx(Dictionary<int, int> spaces, int fileLength)
+        {
+            foreach (var space in spaces)
+            {
+                if (space.Value >= fileLength)
+                    return space.Key;
+            }
+            return -1;
+        }
+
+        static void UpdateSpaces(Dictionary<int, int> spaces, int spaceIdx, int fileLength)
+        {
+            if (spaces[spaceIdx] == fileLength)
+            {
+                spaces.Remove(spaceIdx);
+            }
+            else
+            {
+                int remainingSpace = spaces[spaceIdx] - fileLength;
+                spaces.Remove(spaceIdx);
+                spaces[spaceIdx + fileLength] = remainingSpace;
+            }
+        }
+
+        static void MoveFile(List<string> diskMap, DiskFile file, int targetIdx)
+        {
+            for (int i = 0; i < file.Length; i++)
+            {
+                diskMap[targetIdx + i] = diskMap[file.StartIdx + i];
+                diskMap[file.StartIdx + i] = ".";
+            }
+        }
+
+        static List<string> CompactDiskByFile(List<string> diskMap)
+        {
+            var (files, spaces) = AnalyzeDisk(diskMap);
+
+            files.Sort((a, b) => b.Id.CompareTo(a.Id));
+
+            foreach (var file in files)
+            {
+                int targetIdx = GetFirstAvailableSpaceIdx(spaces, file.Length);
+                if (targetIdx != -1 && targetIdx < file.StartIdx)
+                {
+                    MoveFile(diskMap, file, targetIdx);
+                    UpdateSpaces(spaces, targetIdx, file.Length);
+                }
+            }
+
+            return diskMap;
+        }
+
         #endregion
     }
 }

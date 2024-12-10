@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day8a(), day8b());
+    console.log(day9a(), day9b());
 }
 
 function readDayFile(day){
@@ -667,6 +667,148 @@ function getUniqueAntinodesCount(antinodeMatrix) {
         }
     }
     return count;
+}
+// #endregion
+
+// #region Day9
+function day9a() {
+    const file = readDayFile(9);
+
+    let diskMap = parseDiskMap(file);
+    diskMap = compactDisk(diskMap);
+
+    return calculateChecksum(diskMap);
+}
+
+function day9b() {
+    const file = readDayFile(9);
+
+    let diskMap = parseDiskMap(file);
+    diskMap = compactDiskByFile(diskMap);
+
+    return calculateChecksum(diskMap);
+}
+
+function parseDiskMap(line) {
+    const nums = [];
+    let index = 0;
+
+    for (let i = 0; i < line.length; i++) {
+        const count = parseInt(line[i], 10);
+        if (i % 2 === 0) {
+            for (let j = 0; j < count; j++) {
+                nums.push(index.toString());
+            }
+            index++;
+        } else {
+            for (let j = 0; j < count; j++) {
+                nums.push(".");
+            }
+        }
+    }
+
+    return nums;
+}
+
+function compactDisk(diskMap) {
+    let L = 0;
+    let R = diskMap.length - 1;
+
+    while (L <= R) {
+        if (diskMap[L] === "." && diskMap[R] !== ".") {
+            [diskMap[L], diskMap[R]] = [diskMap[R], diskMap[L]];
+            R--;
+            L++;
+        } else if (diskMap[R] === ".") {
+            R--;
+        } else {
+            L++;
+        }
+    }
+
+    return diskMap;
+}
+
+function calculateChecksum(diskMap) {
+    let checksum = 0;
+
+    for (let i = 0; i < diskMap.length; i++) {
+        if (diskMap[i] !== ".") {
+            checksum += i * parseInt(diskMap[i], 10);
+        }
+    }
+
+    return checksum;
+}
+
+class DiskFile {
+    constructor(id, length, startIdx) {
+        this.id = id;
+        this.length = length;
+        this.startIdx = startIdx;
+    }
+}
+
+function analyzeDisk(diskMap) {
+    const files = [];
+    const spaces = {};
+    let spaceStartIdx = -1;
+
+    diskMap.forEach((item, i) => {
+        if (item === ".") {
+            if (spaceStartIdx === -1) spaceStartIdx = i;
+            spaces[spaceStartIdx] = (spaces[spaceStartIdx] || 0) + 1;
+        } else {
+            if (spaceStartIdx !== -1) spaceStartIdx = -1;
+
+            const fileId = parseInt(item, 10);
+            if (files.length <= fileId) files[fileId] = new DiskFile(fileId, 0, i);
+
+            files[fileId].length++;
+        }
+    });
+
+    return { files, spaces };
+}
+
+function getFirstAvailableSpaceIdx(spaces, fileLength) {
+    for (const [idx, count] of Object.entries(spaces)) {
+        if (count >= fileLength) return parseInt(idx, 10);
+    }
+    return -1;
+}
+
+function updateSpaces(spaces, spaceIdx, fileLength) {
+    if (spaces[spaceIdx] === fileLength) {
+        delete spaces[spaceIdx];
+    } else {
+        const remainingSpace = spaces[spaceIdx] - fileLength;
+        delete spaces[spaceIdx];
+        spaces[spaceIdx + fileLength] = remainingSpace;
+    }
+}
+
+function moveFile(diskMap, file, targetIdx) {
+    for (let i = 0; i < file.length; i++) {
+        diskMap[targetIdx + i] = diskMap[file.startIdx + i];
+        diskMap[file.startIdx + i] = ".";
+    }
+}
+
+function compactDiskByFile(diskMap) {
+    const { files, spaces } = analyzeDisk(diskMap);
+
+    files.sort((a, b) => b.id - a.id);
+
+    files.forEach((file) => {
+        const targetIdx = getFirstAvailableSpaceIdx(spaces, file.length);
+        if (targetIdx !== -1 && targetIdx < file.startIdx) {
+            moveFile(diskMap, file, targetIdx);
+            updateSpaces(spaces, targetIdx, file.length);
+        }
+    });
+
+    return diskMap;
 }
 // #endregion
 
