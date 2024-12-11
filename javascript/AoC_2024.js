@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day9a(), day9b());
+    console.log(day10a(), day10b());
 }
 
 function readDayFile(day){
@@ -810,6 +810,149 @@ function compactDiskByFile(diskMap) {
 
     return diskMap;
 }
+// #endregion
+
+// #region Day10
+function day10a() {
+    const file = readDayFile(10).split("\n");
+
+    return solveTopographicMap(file);
+}
+
+function day10b() {
+    const file = readDayFile(10).split("\n");
+
+    return solveTopographicMapTrailRatings(file);
+}
+
+function solveTopographicMap(input) {
+    const rows = input.length;
+    const cols = input[0].length;
+    const map = Array.from({ length: rows }, (_, r) => 
+        input[r].split('').map(c => parseInt(c))
+    );
+
+    let totalTrailheadScore = 0;
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (map[r][c] === 0) {
+                const trailheadScore = findTrailheadScore(r, c, map, rows, cols);
+                totalTrailheadScore += trailheadScore;
+            }
+        }
+    }
+
+    return totalTrailheadScore;
+}
+
+function findTrailheadScore(startRow, startCol, map, rows, cols) {
+    const visited = Array.from({ length: rows }, () => 
+        Array(cols).fill(false)
+    );
+    const ninePositions = new Set();
+
+    dfs(startRow, startCol, 0, ninePositions, map, rows, cols, visited);
+
+    return ninePositions.size;
+}
+
+function dfs(row, col, expectedHeight, ninePositions, map, rows, cols, visited) {
+    if (row < 0 || row >= rows || col < 0 || col >= cols || 
+        visited[row][col] || map[row][col] !== expectedHeight) {
+        return false;
+    }
+
+    visited[row][col] = true;
+
+    if (expectedHeight === 9) {
+        ninePositions.add(`${row},${col}`);
+    }
+
+    const directions = [
+        [-1, 0], [1, 0], [0, -1], [0, 1]
+    ];
+
+    return directions.some(([dr, dc]) => 
+        dfs(row + dr, col + dc, expectedHeight + 1, ninePositions, map, rows, cols, visited)
+    );
+}
+
+function solveTopographicMapTrailRatings(input) {
+    const { map, rows, cols } = parseTopographicMap(input);
+    const scoresMap = new Map();
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (map[r][c] === 0) {
+                startHike(r, c, map, rows, cols, scoresMap);
+            }
+        }
+    }
+
+    return getScoresSum(scoresMap);
+}
+
+function startHike(startR, startC, map, rows, cols, scoresMap) {
+    const routes = [{ r: startR, c: startC, height: 0, initialCell: serializeCoordinates(startR, startC) }];
+
+    while (routes.length > 0) {
+        const route = routes.shift();
+
+        for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+            const newR = route.r + dr;
+            const newC = route.c + dc;
+            const newHeight = route.height + 1;
+
+            if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) continue;
+
+            const newCell = map[newR][newC];
+            
+            if (newCell !== newHeight) continue;
+
+            if (newCell === 9) {
+                if (!scoresMap.has(route.initialCell)) {
+                    scoresMap.set(route.initialCell, new Map());
+                }
+                const endKey = serializeCoordinates(newR, newC);
+                const currentScore = (scoresMap.get(route.initialCell).get(endKey) || 0) + 1;
+                scoresMap.get(route.initialCell).set(endKey, currentScore);
+            } else {
+                routes.push({
+                    r: newR,
+                    c: newC,
+                    height: newHeight,
+                    initialCell: route.initialCell
+                });
+            }
+        }
+    }
+}
+
+function serializeCoordinates(r, c) {
+    return `${r}:${c}`;
+}
+
+function getScoresSum(scoresMap) {
+    let sum = 0;
+    for (const scores of scoresMap.values()) {
+        for (const score of scores.values()) {
+            sum += score;
+        }
+    }
+    return sum;
+}
+
+function parseTopographicMap(input) {
+    const rows = input.length;
+    const cols = input[0].length;
+    const map = Array.from({ length: rows }, (_, r) => 
+        input[r].split('').map(c => parseInt(c))
+    );
+
+    return { map, rows, cols };
+}
+
 // #endregion
 
 main();

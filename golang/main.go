@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day9a())
-	fmt.Println(day9b())
+	fmt.Println(day10a())
+	fmt.Println(day10b())
 }
 
 // region Day1
@@ -1016,6 +1016,178 @@ func compactDiskByFile(diskMap []string) []string {
 	}
 
 	return diskMap
+}
+
+// endregion
+
+// region Day10
+func day10a() int {
+	file := strings.Split(readDayFile(10), "\n")
+
+	return solveTopographicMap(file)
+}
+
+func day10b() int {
+	file := strings.Split(readDayFile(10), "\n")
+
+	return solveTopographicMapTrailRatings(file)
+}
+
+func solveTopographicMap(input []string) int {
+	rows := len(input)
+	cols := len(input[0])
+	mapGrid := make([][]int, rows)
+
+	for r := range input {
+		mapGrid[r] = make([]int, cols)
+		for c := range input[r] {
+			mapGrid[r][c] = int(input[r][c] - '0')
+		}
+	}
+
+	totalTrailheadScore := 0
+
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			if mapGrid[r][c] == 0 {
+				trailheadScore := findTrailheadScore(r, c, mapGrid, rows, cols)
+				totalTrailheadScore += trailheadScore
+			}
+		}
+	}
+
+	return totalTrailheadScore
+}
+
+func findTrailheadScore(startRow, startCol int, mapGrid [][]int, rows, cols int) int {
+	visited := make([][]bool, rows)
+	for r := range visited {
+		visited[r] = make([]bool, cols)
+	}
+
+	ninePositions := make(map[string]bool)
+
+	var dfs func(int, int, int) bool
+	dfs = func(row, col, expectedHeight int) bool {
+		if row < 0 || row >= rows || col < 0 || col >= cols ||
+			visited[row][col] || mapGrid[row][col] != expectedHeight {
+			return false
+		}
+
+		visited[row][col] = true
+
+		if expectedHeight == 9 {
+			ninePositions[fmt.Sprintf("%d:%d", row, col)] = true
+		}
+
+		directions := [][]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
+		for _, dir := range directions {
+			if dfs(row+dir[0], col+dir[1], expectedHeight+1) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	dfs(startRow, startCol, 0)
+	return len(ninePositions)
+}
+
+func solveTopographicMapTrailRatings(input []string) int {
+	mapGrid, rows, cols := parseTopographicMap(input)
+	scoresMap := make(map[string]map[string]int)
+
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			if mapGrid[r][c] == 0 {
+				startHike(r, c, mapGrid, rows, cols, scoresMap)
+			}
+		}
+	}
+
+	return getScoresSum(scoresMap)
+}
+
+func startHike(startR, startC int, mapGrid [][]int, rows, cols int, scoresMap map[string]map[string]int) {
+	type Route struct {
+		r, c, height int
+		initialCell  string
+	}
+
+	routes := []Route{{
+		r:           startR,
+		c:           startC,
+		height:      0,
+		initialCell: serializeCoordinates(startR, startC),
+	}}
+
+	for len(routes) > 0 {
+		route := routes[0]
+		routes = routes[1:]
+
+		directions := [][]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
+		for _, dir := range directions {
+			newR := route.r + dir[0]
+			newC := route.c + dir[1]
+			newHeight := route.height + 1
+
+			if newR < 0 || newR >= rows || newC < 0 || newC >= cols {
+				continue
+			}
+
+			newCell := mapGrid[newR][newC]
+
+			if newCell != newHeight {
+				continue
+			}
+
+			if newCell == 9 {
+				if _, exists := scoresMap[route.initialCell]; !exists {
+					scoresMap[route.initialCell] = make(map[string]int)
+				}
+
+				endKey := serializeCoordinates(newR, newC)
+				scoresMap[route.initialCell][endKey]++
+			} else {
+				routes = append(routes, Route{
+					r:           newR,
+					c:           newC,
+					height:      newHeight,
+					initialCell: route.initialCell,
+				})
+			}
+		}
+	}
+}
+
+func serializeCoordinates(r, c int) string {
+	return fmt.Sprintf("%d:%d", r, c)
+}
+
+func getScoresSum(scoresMap map[string]map[string]int) int {
+	sum := 0
+	for _, scores := range scoresMap {
+		for _, score := range scores {
+			sum += score
+		}
+	}
+	return sum
+}
+
+func parseTopographicMap(input []string) ([][]int, int, int) {
+	rows := len(input)
+	cols := len(input[0])
+	mapGrid := make([][]int, rows)
+
+	for r := range input {
+		mapGrid[r] = make([]int, cols)
+		for c := range input[r] {
+			mapGrid[r][c] = int(input[r][c] - '0')
+		}
+	}
+
+	return mapGrid, rows, cols
 }
 
 // endregion

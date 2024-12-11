@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day9a(), day9b())
+    print(day10a(), day10b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -644,6 +644,109 @@ def compact_disk_by_file(diskMap):
             
     return diskMap
 
+# endregion
+
+# region Day10
+def day10a():
+    file = readDayFile(10)
+    trail = [list(line.strip()) for line in file]
+
+    return solve_topographic_map(trail)
+
+def day10b():
+    file = readDayFile(10)
+    trail = [list(line.strip()) for line in file]
+
+    return solve_topographic_map_trail_ratings(trail)
+
+def solve_topographic_map(input_data):
+    rows = len(input_data)
+    cols = len(input_data[0])
+    map_grid = [[int(c) for c in row] for row in input_data]
+
+    total_trailhead_score = 0
+
+    for r in range(rows):
+        for c in range(cols):
+            if map_grid[r][c] == 0:
+                trailhead_score = find_trailhead_score(r, c, map_grid, rows, cols)
+                total_trailhead_score += trailhead_score
+
+    return total_trailhead_score
+
+def find_trailhead_score(start_row, start_col, map_grid, rows, cols):
+    visited = [[False] * cols for _ in range(rows)]
+    nine_positions = set()
+
+    def dfs(row, col, expected_height):
+        if (row < 0 or row >= rows or col < 0 or col >= cols or 
+            visited[row][col] or map_grid[row][col] != expected_height):
+            return False
+
+        visited[row][col] = True
+
+        if expected_height == 9:
+            nine_positions.add((row, col))
+
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        return any(
+            dfs(row + dr, col + dc, expected_height + 1)
+            for dr, dc in directions
+        )
+
+    dfs(start_row, start_col, 0)
+    return len(nine_positions)
+
+def solve_topographic_map_trail_ratings(input_data):
+    map_grid, rows, cols = parse_topographic_map(input_data)
+    scores_map = {}
+
+    for r in range(rows):
+        for c in range(cols):
+            if map_grid[r][c] == 0:
+                start_hike(r, c, map_grid, rows, cols, scores_map)
+
+    return get_scores_sum(scores_map)
+
+def start_hike(start_r, start_c, map_grid, rows, cols, scores_map):
+    routes = [(start_r, start_c, 0, f"{start_r}:{start_c}")]
+
+    while routes:
+        route = routes.pop(0)
+        r, c, height, initial_cell = route
+
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            new_r = r + dr
+            new_c = c + dc
+            new_height = height + 1
+
+            if (new_r < 0 or new_r >= rows or 
+                new_c < 0 or new_c >= cols):
+                continue
+
+            new_cell = map_grid[new_r][new_c]
+            
+            if new_cell != new_height:
+                continue
+
+            if new_cell == 9:
+                if initial_cell not in scores_map:
+                    scores_map[initial_cell] = {}
+                
+                end_key = f"{new_r}:{new_c}"
+                scores_map[initial_cell][end_key] = scores_map[initial_cell].get(end_key, 0) + 1
+            else:
+                routes.append((new_r, new_c, new_height, initial_cell))
+
+def get_scores_sum(scores_map):
+    return sum(sum(scores.values()) for scores in scores_map.values())
+
+def parse_topographic_map(input_data):
+    rows = len(input_data)
+    cols = len(input_data[0])
+    map_grid = [[int(c) for c in row] for row in input_data]
+
+    return map_grid, rows, cols
 # endregion
 
 if __name__ == "__main__":

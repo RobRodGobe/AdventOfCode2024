@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day9a());
+            Console.WriteLine(Day10a());
             /* Part b */
-            Console.WriteLine(Day9b());
+            Console.WriteLine(Day10b());
         }
 
         static string[] ReadDayFile(int day)
@@ -1036,5 +1036,184 @@ namespace AoC_2024
         }
 
         #endregion
+
+        # region Day10
+        static int Day10a()
+        {
+            string[] file = ReadDayFile(10);
+
+            return SolveTopographicMap(file);
+        }
+
+        static int Day10b()
+        {
+            string[] file = ReadDayFile(10);
+
+            return SolveTopographicMapTrailRatings(file);
+        }
+
+        static int SolveTopographicMap(string[] input)
+        {
+            int rows = input.Length;
+            int cols = input[0].Length;
+            int[,] map = new int[rows, cols];
+
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    map[r, c] = input[r][c] - '0';
+                }
+            }
+
+            int totalTrailheadScore = 0;
+
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (map[r, c] == 0)
+                    {
+                        int trailheadScore = FindTrailheadScore(r, c, map, rows, cols);
+                        totalTrailheadScore += trailheadScore;
+                    }
+                }
+            }
+
+            return totalTrailheadScore;
+        }
+
+        static int FindTrailheadScore(int startRow, int startCol, int[,] map, int rows, int cols)
+        {
+            bool[,] visited = new bool[rows, cols];
+            HashSet<(int, int)> ninePositions = new HashSet<(int, int)>();
+
+            DFS(startRow, startCol, 0, ninePositions, map, rows, cols, visited);
+
+            return ninePositions.Count;
+        }
+
+        static bool DFS(int row, int col, int expectedHeight, HashSet<(int, int)> ninePositions, int[,] map, int rows, int cols, bool[,] visited)
+        {
+            if (row < 0 || row >= rows || col < 0 || col >= cols || 
+                visited[row, col] || map[row, col] != expectedHeight)
+            {
+                return false;
+            }
+
+            visited[row, col] = true;
+
+            if (expectedHeight == 9)
+            {
+                ninePositions.Add((row, col));
+            }
+
+            bool found = DFS(row - 1, col, expectedHeight + 1, ninePositions, map, rows, cols, visited) ||
+                        DFS(row + 1, col, expectedHeight + 1, ninePositions, map, rows, cols, visited) ||
+                        DFS(row, col - 1, expectedHeight + 1, ninePositions, map, rows, cols, visited) ||
+                        DFS(row, col + 1, expectedHeight + 1, ninePositions, map, rows, cols, visited);
+
+            return found;
+        }
+
+        static int SolveTopographicMapTrailRatings(string[] input)
+        {
+            var (map, rows, cols) = ParseTopographicMap(input);
+            var scoresMap = new Dictionary<string, Dictionary<string, int>>();
+
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (map[r, c] == 0)
+                    {
+                        StartHike(r, c, map, rows, cols, scoresMap);
+                    }
+                }
+            }
+
+            return GetScoresSum(scoresMap);
+        }
+
+        static void StartHike(int startR, int startC, int[,] map, int rows, int cols, 
+                            Dictionary<string, Dictionary<string, int>> scoresMap)
+        {
+            var routes = new Queue<(int r, int c, int height, string initialCell)>();
+            routes.Enqueue((startR, startC, 0, SerializeCoordinates(startR, startC)));
+
+            while (routes.Count > 0)
+            {
+                var route = routes.Dequeue();
+
+                foreach (var (dr, dc) in GetValidDirections())
+                {
+                    int newR = route.r + dr;
+                    int newC = route.c + dc;
+                    int newHeight = route.height + 1;
+
+                    if (newR < 0 || newR >= rows || 
+                        newC < 0 || newC >= cols)
+                        continue;
+
+                    int newCell = map[newR, newC];
+                    
+                    if (newCell != newHeight) continue;
+
+                    if (newCell == 9)
+                    {
+                        if (!scoresMap.ContainsKey(route.initialCell))
+                            scoresMap[route.initialCell] = new Dictionary<string, int>();
+
+                        string endKey = SerializeCoordinates(newR, newC);
+                        if (!scoresMap[route.initialCell].ContainsKey(endKey))
+                            scoresMap[route.initialCell][endKey] = 0;
+
+                        scoresMap[route.initialCell][endKey]++;
+                    }
+                    else
+                    {
+                        routes.Enqueue((newR, newC, newHeight, route.initialCell));
+                    }
+                }
+            }
+        }
+
+        static IEnumerable<(int, int)> GetValidDirections()
+        {
+            return new[] { (-1, 0), (1, 0), (0, -1), (0, 1) };
+        }
+
+        static string SerializeCoordinates(int r, int c)
+        {
+            return $"{r}:{c}";
+        }
+
+        static int GetScoresSum(Dictionary<string, Dictionary<string, int>> scoresMap)
+        {
+            int sum = 0;
+            foreach (var entry in scoresMap.Values)
+            {
+                sum += entry.Values.Sum();
+            }
+            return sum;
+        }
+
+        static (int[,] map, int rows, int cols) ParseTopographicMap(string[] input)
+        {
+            int rows = input.Length;
+            int cols = input[0].Length;
+            int[,] map = new int[rows, cols];
+
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    map[r, c] = input[r][c] - '0';
+                }
+            }
+
+            return (map, rows, cols);
+        }
+        # endregion
     }
 }
