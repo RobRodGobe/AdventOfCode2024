@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day8a(), day8b())
+    print(day9a(), day9b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -525,6 +525,124 @@ def get_unique_antinodes_count(antinode_matrix):
     for row in antinode_matrix:
         count += sum(row)
     return count
+
+# endregion
+
+# region Day9
+def day9a():
+    file = readDayFile(9)
+    line = file[0].strip()
+    diskMap = parse_disk_map(line)
+    diskMap = compact_disk(diskMap)
+    return calculate_checksum(diskMap)
+
+def day9b():
+    file = readDayFile(9)
+    line = file[0].strip()
+    diskMap = parse_disk_map(line)
+    diskMap = compact_disk_by_file(diskMap)
+    return calculate_checksum(diskMap)
+
+def parse_disk_map(line):
+    nums = []
+    index = 0
+
+    for i in range(len(line)):
+        count = int(line[i])
+        if i % 2 == 0:
+            for _ in range(count):
+                nums.append(str(index))
+            index += 1
+        else:
+            for _ in range(count):
+                nums.append(".")
+    
+    return nums
+
+def compact_disk(diskMap):
+    L = 0
+    R = len(diskMap) - 1
+
+    while L <= R:
+        if diskMap[L] == "." and diskMap[R] != ".":
+            diskMap[L], diskMap[R] = diskMap[R], diskMap[L]
+            R -= 1
+            L += 1
+        elif diskMap[R] == ".":
+            R -= 1
+        else:
+            L += 1
+
+    return diskMap
+
+def calculate_checksum(diskMap):
+    return sum(i * int(block) for i, block in enumerate(diskMap) if block != ".")
+
+class DiskFile:
+    def __init__(self, id, length, startIdx):
+        self.id = id
+        self.length = length
+        self.startIdx = startIdx
+
+def analyze_disk(diskMap):
+    files = []
+    spaces = {}
+    spaceStartIdx = -1
+
+    for i, item in enumerate(diskMap):
+        if item == ".":
+            if spaceStartIdx == -1:
+                spaceStartIdx = i
+            spaces[spaceStartIdx] = spaces.get(spaceStartIdx, 0) + 1
+        else:
+            if spaceStartIdx != -1:
+                spaceStartIdx = -1
+
+            fileId = int(item)
+            while len(files) <= fileId:
+                files.append(DiskFile(len(files), 0, i))
+
+            files[fileId].length += 1
+
+    return files, spaces
+
+def get_first_available_space_idx(spaces, fileLength):
+    sorted_indices = sorted(spaces.keys())
+    for idx in sorted_indices:
+        if spaces[idx] >= fileLength:
+            return idx
+    return -1
+
+def move_file(diskMap, file, targetIdx):
+    file_segments = diskMap[file.startIdx:file.startIdx + file.length]
+    
+    for i in range(file.length):
+        diskMap[file.startIdx + i] = "."
+    
+    for i, segment in enumerate(file_segments):
+        diskMap[targetIdx + i] = segment
+
+def update_spaces(spaces, spaceIdx, fileLength):
+    if spaces[spaceIdx] == fileLength:
+        del spaces[spaceIdx]
+    else:
+        remainingSpace = spaces[spaceIdx] - fileLength
+        del spaces[spaceIdx]
+        spaces[spaceIdx + fileLength] = remainingSpace
+
+def compact_disk_by_file(diskMap):
+    files, spaces = analyze_disk(diskMap)
+     
+    files.sort(key=lambda x: x.id, reverse=True)
+    
+    for file in files:
+        targetIdx = get_first_available_space_idx(spaces, file.length)
+        
+        if targetIdx != -1 and targetIdx < file.startIdx:
+            move_file(diskMap, file, targetIdx)
+            update_spaces(spaces, targetIdx, file.length)
+            
+    return diskMap
 
 # endregion
 
