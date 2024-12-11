@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day8a())
-	fmt.Println(day8b())
+	fmt.Println(day9a())
+	fmt.Println(day9b())
 }
 
 // region Day1
@@ -843,6 +843,179 @@ func getUniqueAntinodesCount(antinodeMatrix [][]bool) int {
 		}
 	}
 	return count
+}
+
+// endregion
+
+// region Day9
+type DiskFile struct {
+	ID       int
+	Length   int
+	StartIdx int
+}
+
+func day9a() int {
+	file := readDayFile(9)
+	diskMap := parseDiskMap(file)
+	diskMap = compactDisk(diskMap)
+	return calculateChecksum(diskMap)
+}
+
+func day9b() int {
+	file := readDayFile(9)
+	diskMap := parseDiskMap(file)
+	diskMap = compactDiskByFile(diskMap)
+	return calculateChecksum(diskMap)
+}
+
+func parseDiskMap(line string) []string {
+	nums := []string{}
+	index := 0
+
+	for i := 0; i < len(line); i++ {
+		count, _ := strconv.Atoi(string(line[i]))
+		if i%2 == 0 {
+			for j := 0; j < count; j++ {
+				nums = append(nums, strconv.Itoa(index))
+			}
+			index++
+		} else {
+			for j := 0; j < count; j++ {
+				nums = append(nums, ".")
+			}
+		}
+	}
+
+	return nums
+}
+
+func compactDisk(diskMap []string) []string {
+	L, R := 0, len(diskMap)-1
+
+	for L <= R {
+		if diskMap[L] == "." && diskMap[R] != "." {
+			diskMap[L], diskMap[R] = diskMap[R], diskMap[L]
+			R--
+			L++
+		} else if diskMap[R] == "." {
+			R--
+		} else {
+			L++
+		}
+	}
+
+	return diskMap
+}
+
+func calculateChecksum(diskMap []string) int {
+	checksum := 0
+	for i, block := range diskMap {
+		if block != "." {
+			blockInt, _ := strconv.Atoi(block)
+			checksum += i * blockInt
+		}
+	}
+	return checksum
+}
+
+func analyzeDisk(diskMap []string) ([]DiskFile, map[int]int) {
+	files := []DiskFile{}
+	spaces := make(map[int]int)
+	spaceStartIdx := -1
+
+	for i, item := range diskMap {
+		if item == "." {
+			if spaceStartIdx == -1 {
+				spaceStartIdx = i
+			}
+			spaces[spaceStartIdx]++
+		} else {
+			if spaceStartIdx != -1 {
+				spaceStartIdx = -1
+			}
+
+			fileID, _ := strconv.Atoi(item)
+			for len(files) <= fileID {
+				files = append(files, DiskFile{ID: len(files), Length: 0, StartIdx: i})
+			}
+
+			files[fileID].Length++
+		}
+	}
+
+	return files, spaces
+}
+
+func getFirstAvailableSpaceIdx(spaces map[int]int, fileLength int) int {
+	spaceIndices := make([]int, 0, len(spaces))
+	for idx := range spaces {
+		spaceIndices = append(spaceIndices, idx)
+	}
+
+	sortInts(spaceIndices)
+
+	for _, idx := range spaceIndices {
+		if spaces[idx] >= fileLength {
+			return idx
+		}
+	}
+	return -1
+}
+
+func sortInts(arr []int) {
+	for i := 0; i < len(arr); i++ {
+		for j := i + 1; j < len(arr); j++ {
+			if arr[i] > arr[j] {
+				arr[i], arr[j] = arr[j], arr[i]
+			}
+		}
+	}
+}
+
+func updateSpaces(spaces map[int]int, spaceIdx int, fileLength int) {
+	if spaces[spaceIdx] == fileLength {
+		delete(spaces, spaceIdx)
+	} else {
+		remainingSpace := spaces[spaceIdx] - fileLength
+		delete(spaces, spaceIdx)
+		spaces[spaceIdx+fileLength] = remainingSpace
+	}
+}
+
+func moveFile(diskMap []string, file DiskFile, targetIdx int) {
+	fileSegments := make([]string, file.Length)
+	copy(fileSegments, diskMap[file.StartIdx:file.StartIdx+file.Length])
+
+	for i := 0; i < file.Length; i++ {
+		diskMap[file.StartIdx+i] = "."
+	}
+
+	for i, segment := range fileSegments {
+		diskMap[targetIdx+i] = segment
+	}
+}
+
+func compactDiskByFile(diskMap []string) []string {
+	files, spaces := analyzeDisk(diskMap)
+
+	// Sort files in descending order of ID
+	for i := 0; i < len(files); i++ {
+		for j := i + 1; j < len(files); j++ {
+			if files[i].ID < files[j].ID {
+				files[i], files[j] = files[j], files[i]
+			}
+		}
+	}
+
+	for _, file := range files {
+		targetIdx := getFirstAvailableSpaceIdx(spaces, file.Length)
+		if targetIdx != -1 && targetIdx < file.StartIdx {
+			moveFile(diskMap, file, targetIdx)
+			updateSpaces(spaces, targetIdx, file.Length)
+		}
+	}
+
+	return diskMap
 }
 
 // endregion
