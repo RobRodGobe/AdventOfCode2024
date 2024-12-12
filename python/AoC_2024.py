@@ -1,4 +1,6 @@
 import re
+import math
+from typing import List, Dict
 
 def main():
     # Day 1
@@ -751,36 +753,58 @@ def parse_topographic_map(input_data):
 
 # region Day11
 def day11a():
-    file = readDayFile(11)
-    stones = file.split(" ")
+    file = readDayFile(11)[0]
+    stones = list(map(int, file.split()))
+    rocks = {}
+    for stone in stones:
+        rocks[stone] = rocks.get(stone, 0) + 1
 
-    return blinker(stones, 25)
+    final_rocks = blink_rocks(rocks, 25)
+    return sum(final_rocks.values())
 
 def day11b():
-    file = readDayFile(11)
-    stones = file.split(" ")
+    file = readDayFile(11)[0]
+    stones = list(map(int, file.split()))
+    rocks = {}
+    for stone in stones:
+        rocks[stone] = rocks.get(stone, 0) + 1
 
-    return blinker(stones, 75)
+    final_rocks = blink_rocks(rocks, 75)
+    return sum(final_rocks.values())
 
-def blinker(stones, blinks):
+def blink(rock: int) -> List[int]:
+    if rock == 0:
+        return [1]
+
+    digits = math.floor(math.log10(rock)) + 1
+
+    if digits % 2 != 0:
+        return [rock * 2024]
+
+    half_digits = digits // 2
+    first = rock // (10 ** half_digits)
+    second = rock % (10 ** half_digits)
+
+    return [first, second]
+
+def blink_rocks_iteration(rocks: Dict[int, int]) -> Dict[int, int]:
+    result = {}
+
+    for rock, count in rocks.items():
+        new_rocks = blink(rock)
+
+        for new_rock in new_rocks:
+            result[new_rock] = result.get(new_rock, 0) + count
+
+    return result
+
+def blink_rocks(rocks: Dict[int, int], blinks: int) -> Dict[int, int]:
+    current_rocks = rocks.copy()
+
     for _ in range(blinks):
-        iteration = []
+        current_rocks = blink_rocks_iteration(current_rocks)
 
-        for stone in stones:
-            if stone == "0":
-                iteration.append("1")
-            elif len(stone) % 2 == 0:
-                first = stone[:len(stone)//2].lstrip('0')
-                second = stone[len(stone)//2:].lstrip('0')
-                
-                iteration.append(first or "0")
-                iteration.append(second or "0")
-            else:
-                iteration.append(str(int(stone) * 2024))
-
-        stones = iteration
-
-    return len(stones)
+    return current_rocks
 # endregion
 
 if __name__ == "__main__":

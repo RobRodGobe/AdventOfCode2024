@@ -958,44 +958,64 @@ function parseTopographicMap(input) {
 // #region Day11
 function day11a() {
     const file = readDayFile(11);
-    const stones = file.split(" ");
+    const stones = file.split(" ").map(Number);
+    const rocks = stones.reduce((map, stone) => {
+        map.set(stone, (map.get(stone) || 0) + 1);
+        return map;
+    }, new Map());
 
-    return blinker(stones, 25);
+    const finalRocks = blinkRocks(rocks, 25);
+    return Array.from(finalRocks.values()).reduce((a, b) => a + b, 0);
 }
 
 function day11b() {
     const file = readDayFile(11);
-    const stones = file.split(" ");
+    const stones = file.split(" ").map(Number);
+    const rocks = stones.reduce((map, stone) => {
+        map.set(stone, (map.get(stone) || 0) + 1);
+        return map;
+    }, new Map());
 
-    return blinker(stones, 75);
+    const finalRocks = blinkRocks(rocks, 75);
+    return Array.from(finalRocks.values()).reduce((a, b) => a + b, 0);
 }
 
-function blinker(stones, blinks) {
-    for (let i = 0; i < blinks; i++) {
-        const iteration = [];
+function blink(rock) {
+    if (rock === 0) return [1];
 
-        for (let j = 0; j < stones.length; j++) {
-            if (stones[j] === "0") {
-                iteration.push("1");
-            } else if (stones[j].length % 2 === 0) {
-                const first = stones[j]
-                    .slice(0, stones[j].length / 2)
-                    .replace(/^0+/, '');
-                const second = stones[j]
-                    .slice(stones[j].length / 2)
-                    .replace(/^0+/, '');
-                
-                iteration.push(first || "0");
-                iteration.push(second || "0");
-            } else {
-                iteration.push(String(BigInt(stones[j]) * 2024n));
-            }
+    const digits = Math.floor(Math.log10(rock)) + 1;
+
+    if (digits % 2 !== 0) return [rock * 2024];
+
+    const halfDigits = Math.floor(digits / 2);
+    const first = Math.floor(rock / Math.pow(10, halfDigits));
+    const second = rock % Math.pow(10, halfDigits);
+
+    return [first, second];
+}
+
+function blinkRocksIteration(rocks) {
+    const result = new Map();
+
+    for (const [rock, count] of rocks.entries()) {
+        const newRocks = blink(rock);
+
+        for (const newRock of newRocks) {
+            result.set(newRock, (result.get(newRock) || 0) + count);
         }
-
-        stones = iteration;
     }
 
-    return stones.length;
+    return result;
+}
+
+function blinkRocks(rocks, blinks) {
+    let currentRocks = new Map(rocks);
+
+    for (let i = 0; i < blinks; i++) {
+        currentRocks = blinkRocksIteration(currentRocks);
+    }
+
+    return currentRocks;
 }
 // #endregion
 

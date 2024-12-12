@@ -1284,50 +1284,6 @@ namespace AoC_2024
 
             return currentRocks;
         }
-/*
-        static long Blinker(string[] stones, int blinks)
-        {
-            LinkedList<long> afterBlinks = new LinkedList<long>(stones.Select(long.Parse));
-
-            for (int i = 0; i < blinks; i++)
-            {
-                LinkedList<long> newStones = new LinkedList<long>();
-
-                while (afterBlinks.Count > 0)
-                {
-                    long stone = afterBlinks.First.Value;
-                    afterBlinks.RemoveFirst();
-
-                    if (stone == 0)
-                    {
-                        newStones.AddLast(1);
-                    }
-                    else
-                    {
-                        string stoneStr = stone.ToString();
-
-                        if (stoneStr.Length % 2 == 0)
-                        {
-                            int mid = stoneStr.Length / 2;
-                            long left = long.Parse(stoneStr.Substring(0, mid));
-                            long right = long.Parse(stoneStr.Substring(mid));
-
-                            newStones.AddLast(left);
-                            newStones.AddLast(right);
-                        }
-                        else
-                        {
-                            newStones.AddLast(stone * 2024);
-                        }
-                    }
-                }
-
-                afterBlinks = newStones;
-            }
-
-            return afterBlinks.Count;
-        }
-        */
         #endregion
     }
 }

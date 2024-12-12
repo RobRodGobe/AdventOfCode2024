@@ -1196,47 +1196,84 @@ func parseTopographicMap(input []string) ([][]int, int, int) {
 func day11a() int64 {
 	file := readDayFile(11)
 	stones := strings.Split(file, " ")
+	rocks := make(map[int64]int64)
 
-	return Blinker(stones, 25)
+	for _, stoneStr := range stones {
+		stone, _ := strconv.ParseInt(stoneStr, 10, 64)
+		rocks[stone]++
+	}
+
+	finalRocks := blinkRocks(rocks, 25)
+	var total int64
+	for _, count := range finalRocks {
+		total += count
+	}
+
+	return total
 }
 
 func day11b() int64 {
 	file := readDayFile(11)
 	stones := strings.Split(file, " ")
+	rocks := make(map[int64]int64)
 
-	return Blinker(stones, 75)
-}
-
-func Blinker(stones []string, blinks int) int64 {
-	for i := 0; i < blinks; i++ {
-		iteration := []string{}
-
-		for _, stone := range stones {
-			if stone == "0" {
-				iteration = append(iteration, "1")
-			} else if len(stone)%2 == 0 {
-				first := strings.TrimLeft(stone[:len(stone)/2], "0")
-				second := strings.TrimLeft(stone[len(stone)/2:], "0")
-
-				if first == "" {
-					first = "0"
-				}
-				if second == "" {
-					second = "0"
-				}
-
-				iteration = append(iteration, first)
-				iteration = append(iteration, second)
-			} else {
-				num, _ := strconv.Atoi(stone)
-				iteration = append(iteration, strconv.Itoa(num*2024))
-			}
-		}
-
-		stones = iteration
+	for _, stoneStr := range stones {
+		stone, _ := strconv.ParseInt(stoneStr, 10, 64)
+		rocks[stone]++
 	}
 
-	return int64(len(stones))
+	finalRocks := blinkRocks(rocks, 75)
+	var total int64
+	for _, count := range finalRocks {
+		total += count
+	}
+
+	return total
+}
+
+func blink(rock int64) []int64 {
+	if rock == 0 {
+		return []int64{1}
+	}
+
+	digits := int64(math.Floor(math.Log10(float64(rock)))) + 1
+
+	if digits%2 != 0 {
+		return []int64{rock * 2024}
+	}
+
+	halfDigits := digits / 2
+	first := rock / int64(math.Pow(10, float64(halfDigits)))
+	second := rock % int64(math.Pow(10, float64(halfDigits)))
+
+	return []int64{first, second}
+}
+
+func blinkRocksIteration(rocks map[int64]int64) map[int64]int64 {
+	result := make(map[int64]int64)
+
+	for rock, count := range rocks {
+		newRocks := blink(rock)
+
+		for _, newRock := range newRocks {
+			result[newRock] += count
+		}
+	}
+
+	return result
+}
+
+func blinkRocks(rocks map[int64]int64, blinks int) map[int64]int64 {
+	currentRocks := make(map[int64]int64)
+	for k, v := range rocks {
+		currentRocks[k] = v
+	}
+
+	for i := 0; i < blinks; i++ {
+		currentRocks = blinkRocksIteration(currentRocks)
+	}
+
+	return currentRocks
 }
 
 // endregion
