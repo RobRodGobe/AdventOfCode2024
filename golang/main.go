@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day10a())
-	fmt.Println(day10b())
+	fmt.Println(day11a())
+	fmt.Println(day11b())
 }
 
 // region Day1
@@ -1188,6 +1188,55 @@ func parseTopographicMap(input []string) ([][]int, int, int) {
 	}
 
 	return mapGrid, rows, cols
+}
+
+// endregion
+
+// region Day11
+func day11a() int64 {
+	file := readDayFile(11)
+	stones := strings.Split(file, " ")
+
+	return Blinker(stones, 25)
+}
+
+func day11b() int64 {
+	file := readDayFile(11)
+	stones := strings.Split(file, " ")
+
+	return Blinker(stones, 75)
+}
+
+func Blinker(stones []string, blinks int) int64 {
+	for i := 0; i < blinks; i++ {
+		iteration := []string{}
+
+		for _, stone := range stones {
+			if stone == "0" {
+				iteration = append(iteration, "1")
+			} else if len(stone)%2 == 0 {
+				first := strings.TrimLeft(stone[:len(stone)/2], "0")
+				second := strings.TrimLeft(stone[len(stone)/2:], "0")
+
+				if first == "" {
+					first = "0"
+				}
+				if second == "" {
+					second = "0"
+				}
+
+				iteration = append(iteration, first)
+				iteration = append(iteration, second)
+			} else {
+				num, _ := strconv.Atoi(stone)
+				iteration = append(iteration, strconv.Itoa(num*2024))
+			}
+		}
+
+		stones = iteration
+	}
+
+	return int64(len(stones))
 }
 
 // endregion

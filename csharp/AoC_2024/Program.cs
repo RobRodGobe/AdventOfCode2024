@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day10a());
+            Console.WriteLine(Day11a());
             /* Part b */
-            Console.WriteLine(Day10b());
+            Console.WriteLine(Day11b());
         }
 
         static string[] ReadDayFile(int day)
@@ -1037,7 +1037,7 @@ namespace AoC_2024
 
         #endregion
 
-        # region Day10
+        #region Day10
         static int Day10a()
         {
             string[] file = ReadDayFile(10);
@@ -1214,6 +1214,120 @@ namespace AoC_2024
 
             return (map, rows, cols);
         }
-        # endregion
+        #endregion
+    
+        #region Day11
+        static long Day11a()
+        {
+            string file = ReadDayFile(11)[0];
+            string[] stones = file.Split(" ");
+            Dictionary<long, long> rocks = stones.Select(long.Parse)
+                                                .GroupBy(x => x)
+                                                .ToDictionary(g => g.Key, g => (long)g.Count());
+            
+            Dictionary<long, long> finalRocks = BlinkRocks(rocks, 25);
+            return finalRocks.Values.Sum();
+        }
+
+        static long Day11b()
+        {
+            string file = ReadDayFile(11)[0];
+            string[] stones = file.Split(" ");
+            Dictionary<long, long> rocks = stones.Select(long.Parse)
+                                                .GroupBy(x => x)
+                                                .ToDictionary(g => g.Key, g => (long)g.Count());
+            
+            Dictionary<long, long> finalRocks = BlinkRocks(rocks, 75);
+            return finalRocks.Values.Sum();            
+        }
+
+        static List<long> Blink(long rock)
+        {
+            if (rock == 0) return [1];
+
+            long digits = (long)Math.Floor(Math.Log10(rock)) + 1;
+
+            if (digits % 2 != 0) return [rock * 2024];
+
+            long halfDigits = digits / 2;
+            long first = rock / (long)Math.Pow(10, halfDigits);
+            long second = rock % (long)Math.Pow(10, halfDigits);
+
+            return [first, second];
+        }
+
+        static Dictionary<long, long> BlinkRocksIteration(Dictionary<long, long> rocks)
+        {
+            Dictionary<long, long> result = new Dictionary<long, long>();
+
+            foreach(var (rock, count) in rocks)
+            {
+                List<long> newRocks = Blink(rock);
+
+                for (int i = 0; i < newRocks.Count(); i++)
+                {
+                    result[newRocks[i]] = result.GetValueOrDefault(newRocks[i]) + count;
+                }
+            }
+
+            return result;
+        }
+
+        static Dictionary<long, long> BlinkRocks(Dictionary<long, long> rocks, int blinks)
+        {
+            Dictionary<long, long> currentRocks = new Dictionary<long, long>(rocks);
+
+            for (int i = 0; i < blinks; i++)
+            {
+                currentRocks = BlinkRocksIteration(currentRocks);
+            }
+
+            return currentRocks;
+        }
+/*
+        static long Blinker(string[] stones, int blinks)
+        {
+            LinkedList<long> afterBlinks = new LinkedList<long>(stones.Select(long.Parse));
+
+            for (int i = 0; i < blinks; i++)
+            {
+                LinkedList<long> newStones = new LinkedList<long>();
+
+                while (afterBlinks.Count > 0)
+                {
+                    long stone = afterBlinks.First.Value;
+                    afterBlinks.RemoveFirst();
+
+                    if (stone == 0)
+                    {
+                        newStones.AddLast(1);
+                    }
+                    else
+                    {
+                        string stoneStr = stone.ToString();
+
+                        if (stoneStr.Length % 2 == 0)
+                        {
+                            int mid = stoneStr.Length / 2;
+                            long left = long.Parse(stoneStr.Substring(0, mid));
+                            long right = long.Parse(stoneStr.Substring(mid));
+
+                            newStones.AddLast(left);
+                            newStones.AddLast(right);
+                        }
+                        else
+                        {
+                            newStones.AddLast(stone * 2024);
+                        }
+                    }
+                }
+
+                afterBlinks = newStones;
+            }
+
+            return afterBlinks.Count;
+        }
+        */
+        #endregion
     }
 }

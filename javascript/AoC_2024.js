@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day10a(), day10b());
+    console.log(day11a(), day11b());
 }
 
 function readDayFile(day){
@@ -953,6 +953,50 @@ function parseTopographicMap(input) {
     return { map, rows, cols };
 }
 
+// #endregion
+
+// #region Day11
+function day11a() {
+    const file = readDayFile(11);
+    const stones = file.split(" ");
+
+    return blinker(stones, 25);
+}
+
+function day11b() {
+    const file = readDayFile(11);
+    const stones = file.split(" ");
+
+    return blinker(stones, 75);
+}
+
+function blinker(stones, blinks) {
+    for (let i = 0; i < blinks; i++) {
+        const iteration = [];
+
+        for (let j = 0; j < stones.length; j++) {
+            if (stones[j] === "0") {
+                iteration.push("1");
+            } else if (stones[j].length % 2 === 0) {
+                const first = stones[j]
+                    .slice(0, stones[j].length / 2)
+                    .replace(/^0+/, '');
+                const second = stones[j]
+                    .slice(stones[j].length / 2)
+                    .replace(/^0+/, '');
+                
+                iteration.push(first || "0");
+                iteration.push(second || "0");
+            } else {
+                iteration.push(String(BigInt(stones[j]) * 2024n));
+            }
+        }
+
+        stones = iteration;
+    }
+
+    return stones.length;
+}
 // #endregion
 
 main();

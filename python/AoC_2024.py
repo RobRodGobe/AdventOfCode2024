@@ -2,7 +2,7 @@ import re
 
 def main():
     # Day 1
-    print(day10a(), day10b())
+    print(day11a(), day11b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -747,6 +747,40 @@ def parse_topographic_map(input_data):
     map_grid = [[int(c) for c in row] for row in input_data]
 
     return map_grid, rows, cols
+# endregion
+
+# region Day11
+def day11a():
+    file = readDayFile(11)
+    stones = file.split(" ")
+
+    return blinker(stones, 25)
+
+def day11b():
+    file = readDayFile(11)
+    stones = file.split(" ")
+
+    return blinker(stones, 75)
+
+def blinker(stones, blinks):
+    for _ in range(blinks):
+        iteration = []
+
+        for stone in stones:
+            if stone == "0":
+                iteration.append("1")
+            elif len(stone) % 2 == 0:
+                first = stone[:len(stone)//2].lstrip('0')
+                second = stone[len(stone)//2:].lstrip('0')
+                
+                iteration.append(first or "0")
+                iteration.append(second or "0")
+            else:
+                iteration.append(str(int(stone) * 2024))
+
+        stones = iteration
+
+    return len(stones)
 # endregion
 
 if __name__ == "__main__":
