@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day11a())
-	fmt.Println(day11b())
+	fmt.Println(day12a())
+	fmt.Println(day12b())
 }
 
 // region Day1
@@ -1274,6 +1274,132 @@ func blinkRocks(rocks map[int64]int64, blinks int) map[int64]int64 {
 	}
 
 	return currentRocks
+}
+
+// endregion
+
+// region Day12
+func day12a() int {
+	file := strings.Split(readDayFile(12), "\n")
+
+	return calculateTotalFencingPrice(file)
+}
+
+func day12b() int {
+	file := strings.Split(readDayFile(12), "\n")
+
+	return calculateTotalFencingPriceWithInnerSides(file)
+}
+
+func calculateTotalFencingPrice(grid []string) int {
+	n, m := len(grid), len(grid[0])
+	visited := make(map[string]bool)
+	totalPrice := 0
+
+	for i := 0; i < n; i++ {
+		for j := 0; j < m; j++ {
+			key := fmt.Sprintf("%d,%d", i, j)
+			if !visited[key] {
+				area, borders := visitRegion(grid, i, j, visited)
+				totalPrice += area * len(borders)
+			}
+		}
+	}
+
+	return totalPrice
+}
+
+func calculateTotalFencingPriceWithInnerSides(grid []string) int {
+	n, m := len(grid), len(grid[0])
+	visited := make(map[string]bool)
+	totalPrice := 0
+
+	for i := 0; i < n; i++ {
+		for j := 0; j < m; j++ {
+			key := fmt.Sprintf("%d,%d", i, j)
+			if !visited[key] {
+				area, borders := visitRegion(grid, i, j, visited)
+				totalPrice += area * countSides(borders)
+			}
+		}
+	}
+
+	return totalPrice
+}
+
+func visitRegion(grid []string, startI, startJ int, visited map[string]bool) (int, map[string]bool) {
+	n, m := len(grid), len(grid[0])
+	plant := grid[startI][startJ]
+	area := 0
+	borders := make(map[string]bool)
+
+	var visit func(int, int)
+	visit = func(i, j int) {
+		key := fmt.Sprintf("%d,%d", i, j)
+		if visited[key] {
+			return
+		}
+
+		visited[key] = true
+		area++
+
+		dx := []int{-1, 1, 0, 0}
+		dy := []int{0, 0, -1, 1}
+
+		for k := 0; k < 4; k++ {
+			i2 := i + dx[k]
+			j2 := j + dy[k]
+
+			if i2 >= 0 && i2 < n && j2 >= 0 && j2 < m && grid[i2][j2] == plant {
+				visit(i2, j2)
+			} else {
+				borderKey := fmt.Sprintf("%d,%d,%d,%d", i, j, i2, j2)
+				borders[borderKey] = true
+			}
+		}
+	}
+
+	visit(startI, startJ)
+	return area, borders
+}
+
+func countSides(borders map[string]bool) int {
+	visited := make(map[string]bool)
+
+	var visitSide func(int, int, int, int)
+	visitSide = func(i, j, i2, j2 int) {
+		side := fmt.Sprintf("%d,%d,%d,%d", i, j, i2, j2)
+		if visited[side] || !borders[side] {
+			return
+		}
+
+		visited[side] = true
+
+		if i == i2 {
+			visitSide(i-1, j, i2-1, j2)
+			visitSide(i+1, j, i2+1, j2)
+		} else {
+			visitSide(i, j-1, i2, j2-1)
+			visitSide(i, j+1, i2, j2+1)
+		}
+	}
+
+	numSides := 0
+	for side := range borders {
+		if visited[side] {
+			continue
+		}
+
+		numSides++
+		parts := strings.Split(side, ",")
+		i, _ := strconv.Atoi(parts[0])
+		j, _ := strconv.Atoi(parts[1])
+		i2, _ := strconv.Atoi(parts[2])
+		j2, _ := strconv.Atoi(parts[3])
+		visitSide(i, j, i2, j2)
+	}
+
+	return numSides
 }
 
 // endregion

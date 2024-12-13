@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day11a());
+            Console.WriteLine(Day12a());
             /* Part b */
-            Console.WriteLine(Day11b());
+            Console.WriteLine(Day12b());
         }
 
         static string[] ReadDayFile(int day)
@@ -1283,6 +1283,140 @@ namespace AoC_2024
             }
 
             return currentRocks;
+        }
+        #endregion
+    
+        #region Day12
+        static int Day12a()
+        {
+            string[] file = ReadDayFile(12);
+            return CalculateTotalFencingPrice(file);
+        }
+
+        static int Day12b()
+        {
+            string[] file = ReadDayFile(12);
+            return CalculateTotalFencingPriceWithInnerSides(file);
+        }
+
+        static int CalculateTotalFencingPrice(string[] grid)
+        {
+            int n = grid.Length;
+            int m = grid[0].Length;
+            HashSet<(int, int)> visited = new HashSet<(int, int)>();
+            int totalPrice = 0;
+
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    if (!visited.Contains((i, j)))
+                    {
+                        var (area, borders) = VisitRegion(grid, i, j, visited);
+                        totalPrice += area * borders.Count;
+                    }
+                }
+            }
+
+            return totalPrice;
+        }
+
+        static int CalculateTotalFencingPriceWithInnerSides(string[] grid)
+        {
+            int n = grid.Length;
+            int m = grid[0].Length;
+            HashSet<(int, int)> visited = new HashSet<(int, int)>();
+            int totalPrice = 0;
+
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    if (!visited.Contains((i, j)))
+                    {
+                        var (area, borders) = VisitRegion(grid, i, j, visited);
+                        totalPrice += area * CountSides(borders);
+                    }
+                }
+            }
+
+            return totalPrice;
+        }
+
+        static (int area, HashSet<(int, int, int, int)> borders) VisitRegion(string[] grid, int startI, int startJ, HashSet<(int, int)> visited)
+        {
+            int n = grid.Length;
+            int m = grid[0].Length;
+            char plant = grid[startI][startJ];
+            int area = 0;
+            HashSet<(int, int, int, int)> borders = new HashSet<(int, int, int, int)>();
+
+            void Visit(int i, int j)
+            {
+                if (visited.Contains((i, j)))
+                    return;
+
+                visited.Add((i, j));
+                area++;
+
+                int[] dx = { -1, 1, 0, 0 };
+                int[] dy = { 0, 0, -1, 1 };
+
+                for (int k = 0; k < 4; k++)
+                {
+                    int i2 = i + dx[k];
+                    int j2 = j + dy[k];
+
+                    if (i2 >= 0 && i2 < n && j2 >= 0 && j2 < m && grid[i2][j2] == plant)
+                    {
+                        Visit(i2, j2);
+                    }
+                    else
+                    {
+                        borders.Add((i, j, i2, j2));
+                    }
+                }
+            }
+
+            Visit(startI, startJ);
+            return (area, borders);
+        }
+
+        static int CountSides(HashSet<(int, int, int, int)> borders)
+        {
+            HashSet<(int, int, int, int)> visited = new HashSet<(int, int, int, int)>();
+
+            void VisitSide(int i, int j, int i2, int j2)
+            {
+                var side = (i, j, i2, j2);
+                if (visited.Contains(side) || !borders.Contains(side))
+                    return;
+
+                visited.Add(side);
+
+                if (i == i2)
+                {
+                    VisitSide(i - 1, j, i2 - 1, j2);
+                    VisitSide(i + 1, j, i2 + 1, j2);
+                }
+                else
+                {
+                    VisitSide(i, j - 1, i2, j2 - 1);
+                    VisitSide(i, j + 1, i2, j2 + 1);
+                }
+            }
+
+            int numSides = 0;
+            foreach (var side in borders)
+            {
+                if (visited.Contains(side))
+                    continue;
+
+                numSides++;
+                VisitSide(side.Item1, side.Item2, side.Item3, side.Item4);
+            }
+
+            return numSides;
         }
         #endregion
     }

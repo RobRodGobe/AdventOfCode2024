@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day11a(), day11b());
+    console.log(day12a(), day12b());
 }
 
 function readDayFile(day){
@@ -1019,4 +1019,113 @@ function blinkRocks(rocks, blinks) {
 }
 // #endregion
 
+// #region Day12
+function day12a() {
+    const file = readDayFile(12).split("\n");
+    return calculateTotalFencingPrice(file);
+}
+
+function day12b() {
+    const file = readDayFile(12).split("\n");
+    return calculateTotalFencingPriceWithInnerSides(file);
+}
+
+function calculateTotalFencingPrice(grid) {
+    const n = grid.length;
+    const m = grid[0].length;
+    const visited = new Set();
+    let totalPrice = 0;
+
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < m; j++) {
+            if (!visited.has(`${i},${j}`)) {
+                const [area, borders] = visitRegion(grid, i, j, visited);
+                totalPrice += area * borders.size;
+            }
+        }
+    }
+
+    return totalPrice;
+}
+
+function calculateTotalFencingPriceWithInnerSides(grid) {
+    const n = grid.length;
+    const m = grid[0].length;
+    const visited = new Set();
+    let totalPrice = 0;
+
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < m; j++) {
+            if (!visited.has(`${i},${j}`)) {
+                const [area, borders] = visitRegion(grid, i, j, visited);
+                totalPrice += area * countSides(borders);
+            }
+        }
+    }
+
+    return totalPrice;
+}
+
+function visitRegion(grid, startI, startJ, visited) {
+    const n = grid.length;
+    const m = grid[0].length;
+    const plant = grid[startI][startJ];
+    let area = 0;
+    const borders = new Set();
+
+    function visit(i, j) {
+        if (visited.has(`${i},${j}`)) return;
+
+        visited.add(`${i},${j}`);
+        area++;
+
+        const dx = [-1, 1, 0, 0];
+        const dy = [0, 0, -1, 1];
+
+        for (let k = 0; k < 4; k++) {
+            const i2 = i + dx[k];
+            const j2 = j + dy[k];
+
+            if (i2 >= 0 && i2 < n && j2 >= 0 && j2 < m && grid[i2][j2] === plant) {
+                visit(i2, j2);
+            } else {
+                borders.add(`${i},${j},${i2},${j2}`);
+            }
+        }
+    }
+
+    visit(startI, startJ);
+    return [area, borders];
+}
+
+function countSides(borders) {
+    const visited = new Set();
+
+    function visitSide(i, j, i2, j2) {
+        const side = `${i},${j},${i2},${j2}`;
+        if (visited.has(side) || !borders.has(side)) return;
+
+        visited.add(side);
+
+        if (i === i2) {
+            visitSide(i - 1, j, i2 - 1, j2);
+            visitSide(i + 1, j, i2 + 1, j2);
+        } else {
+            visitSide(i, j - 1, i2, j2 - 1);
+            visitSide(i, j + 1, i2, j2 + 1);
+        }
+    }
+
+    let numSides = 0;
+    for (const side of borders) {
+        const [i, j, i2, j2] = side.split(',').map(Number);
+        if (visited.has(side)) continue;
+
+        numSides++;
+        visitSide(i, j, i2, j2);
+    }
+
+    return numSides;
+}
+// #endregion
 main();

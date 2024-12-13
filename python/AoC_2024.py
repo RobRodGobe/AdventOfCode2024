@@ -4,7 +4,7 @@ from typing import List, Dict
 
 def main():
     # Day 1
-    print(day11a(), day11b())
+    print(day12a(), day12b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -805,6 +805,103 @@ def blink_rocks(rocks: Dict[int, int], blinks: int) -> Dict[int, int]:
         current_rocks = blink_rocks_iteration(current_rocks)
 
     return current_rocks
+# endregion
+
+# region Day12
+def day12a():
+    file = readDayFile(12)
+    lines = [list(line.strip()) for line in file]
+
+    return calculate_total_fencing_price(lines)
+
+def day12b():
+    file = readDayFile(12)
+    lines = [list(line.strip()) for line in file]
+
+    return calculate_total_fencing_price_with_inner_sides(lines)
+   
+
+def calculate_total_fencing_price(grid):
+    n, m = len(grid), len(grid[0])
+    visited = set()
+    total_price = 0
+
+    for i in range(n):
+        for j in range(m):
+            if (i, j) not in visited:
+                area, borders = visit_region(grid, i, j, visited)
+                total_price += area * len(borders)
+
+    return total_price
+
+def calculate_total_fencing_price_with_inner_sides(grid):
+    n, m = len(grid), len(grid[0])
+    visited = set()
+    total_price = 0
+
+    for i in range(n):
+        for j in range(m):
+            if (i, j) not in visited:
+                area, borders = visit_region(grid, i, j, visited)
+                total_price += area * count_sides(borders)
+
+    return total_price
+
+def visit_region(grid, start_i, start_j, visited):
+    n, m = len(grid), len(grid[0])
+    plant = grid[start_i][start_j]
+    area = 0
+    borders = set()
+
+    def visit(i, j):
+        nonlocal area
+        if (i, j) in visited:
+            return
+
+        visited.add((i, j))
+        area += 1
+
+        dx = [-1, 1, 0, 0]
+        dy = [0, 0, -1, 1]
+
+        for k in range(4):
+            i2 = i + dx[k]
+            j2 = j + dy[k]
+
+            if 0 <= i2 < n and 0 <= j2 < m and grid[i2][j2] == plant:
+                visit(i2, j2)
+            else:
+                borders.add((i, j, i2, j2))
+
+    visit(start_i, start_j)
+    return area, borders
+
+def count_sides(borders):
+    visited = set()
+
+    def visit_side(i, j, i2, j2):
+        side = (i, j, i2, j2)
+        if side in visited or side not in borders:
+            return
+
+        visited.add(side)
+
+        if i == i2:
+            visit_side(i - 1, j, i2 - 1, j2)
+            visit_side(i + 1, j, i2 + 1, j2)
+        else:
+            visit_side(i, j - 1, i2, j2 - 1)
+            visit_side(i, j + 1, i2, j2 + 1)
+
+    num_sides = 0
+    for side in borders:
+        if side in visited:
+            continue
+
+        num_sides += 1
+        visit_side(*side)
+
+    return num_sides
 # endregion
 
 if __name__ == "__main__":
