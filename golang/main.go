@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day12a())
-	fmt.Println(day12b())
+	fmt.Println(day13a())
+	fmt.Println(day13b())
 }
 
 // region Day1
@@ -1400,6 +1400,106 @@ func countSides(borders map[string]bool) int {
 	}
 
 	return numSides
+}
+
+// endregion
+
+// region Day13
+func day13a() int64 {
+	file := strings.Split(readDayFile(13), "\n")
+
+	return GetMaxPrizeForMinTokens(file)
+}
+
+func day13b() int64 {
+	file := strings.Split(readDayFile(13), "\n")
+
+	machines := ParseClawMachineInput(file)
+
+	for i := range machines {
+		machines[i].PrizeX += 10_000_000_000_000
+		machines[i].PrizeY += 10_000_000_000_000
+	}
+
+	var adjustedInput []string
+	for _, machine := range machines {
+		adjustedInput = append(adjustedInput,
+			fmt.Sprintf("Button A: X+%d, Y+%d", machine.AX, machine.AY),
+			fmt.Sprintf("Button B: X+%d, Y+%d", machine.BX, machine.BY),
+			fmt.Sprintf("Prize: X=%d, Y=%d", machine.PrizeX, machine.PrizeY),
+		)
+	}
+
+	return GetMaxPrizeForMinTokens(adjustedInput)
+}
+
+type ClawMachineSettings struct {
+	AX, AY, BX, BY int
+	PrizeX, PrizeY int64
+}
+
+func ParseClawMachineInput(input []string) []ClawMachineSettings {
+	var machines []ClawMachineSettings
+	var cleanedData []string
+
+	for _, line := range input {
+		if strings.TrimSpace(line) != "" {
+			cleanedData = append(cleanedData, line)
+		}
+	}
+
+	for i := 0; i < len(cleanedData); i += 3 {
+		aMove := strings.Split(strings.ReplaceAll(cleanedData[i], "Button A: ", ""), ", ")
+		bMove := strings.Split(strings.ReplaceAll(cleanedData[i+1], "Button B: ", ""), ", ")
+		prize := strings.Split(strings.ReplaceAll(cleanedData[i+2], "Prize: ", ""), ", ")
+
+		ax, _ := strconv.Atoi(strings.ReplaceAll(aMove[0], "X+", ""))
+		ay, _ := strconv.Atoi(strings.ReplaceAll(aMove[1], "Y+", ""))
+		bx, _ := strconv.Atoi(strings.ReplaceAll(bMove[0], "X+", ""))
+		by, _ := strconv.Atoi(strings.ReplaceAll(bMove[1], "Y+", ""))
+		prizeX, _ := strconv.ParseInt(strings.ReplaceAll(prize[0], "X=", ""), 10, 64)
+		prizeY, _ := strconv.ParseInt(strings.ReplaceAll(prize[1], "Y=", ""), 10, 64)
+
+		machines = append(machines, ClawMachineSettings{AX: ax, AY: ay, BX: bx, BY: by, PrizeX: prizeX, PrizeY: prizeY})
+	}
+
+	return machines
+}
+
+func CalculatePrice(machine ClawMachineSettings) *int64 {
+	det := int64(machine.AY*machine.BX - machine.AX*machine.BY)
+	if det == 0 {
+		return nil
+	}
+
+	b := (int64(machine.AY)*machine.PrizeX - int64(machine.AX)*machine.PrizeY) / det
+	a := int64(0)
+	if machine.AX != 0 {
+		a = (machine.PrizeX - b*int64(machine.BX)) / int64(machine.AX)
+	}
+
+	if int64(machine.AX)*a+int64(machine.BX)*b == machine.PrizeX &&
+		int64(machine.AY)*a+int64(machine.BY)*b == machine.PrizeY &&
+		a >= 0 && b >= 0 {
+		result := a*3 + b
+		return &result
+	}
+
+	return nil
+}
+
+func GetMaxPrizeForMinTokens(input []string) int64 {
+	machines := ParseClawMachineInput(input)
+	var totalTokens int64
+
+	for _, machine := range machines {
+		tokens := CalculatePrice(machine)
+		if tokens != nil {
+			totalTokens += *tokens
+		}
+	}
+
+	return totalTokens
 }
 
 // endregion

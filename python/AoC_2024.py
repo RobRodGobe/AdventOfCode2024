@@ -1,10 +1,10 @@
 import re
 import math
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 def main():
     # Day 1
-    print(day12a(), day12b())
+    print(day13a(), day13b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -902,6 +902,83 @@ def count_sides(borders):
         visit_side(*side)
 
     return num_sides
+# endregion
+
+# region Day13
+def day13a():
+    file = readDayFile(13)
+
+    return get_max_prize_for_min_tokens(file)
+
+def day13b():
+    file = readDayFile(13)
+    machines = parse_claw_machine_input(file)
+    for machine in machines:
+        machine.prize_x += 10_000_000_000_000
+        machine.prize_y += 10_000_000_000_000
+
+    adjusted_input = []
+    for machine in machines:
+        adjusted_input.extend([
+            f"Button A: X+{machine.ax}, Y+{machine.ay}",
+            f"Button B: X+{machine.bx}, Y+{machine.by}",
+            f"Prize: X={machine.prize_x}, Y={machine.prize_y}"
+        ])
+
+    return get_max_prize_for_min_tokens(adjusted_input)
+
+class ClawMachineSettings:
+    def __init__(self, ax, ay, bx, by, prize_x, prize_y):
+        self.ax = ax
+        self.ay = ay
+        self.bx = bx
+        self.by = by
+        self.prize_x = prize_x
+        self.prize_y = prize_y
+
+def parse_claw_machine_input(input_data: List[str]) -> List[ClawMachineSettings]:
+    machines = []
+    cleaned_data = [line for line in input_data if line.strip() != ""]
+    for i in range(0, len(cleaned_data), 3):
+        a_move = cleaned_data[i].strip().replace("Button A: ", "").split(", ")
+        b_move = cleaned_data[i + 1].strip().replace("Button B: ", "").split(", ")
+        prize = cleaned_data[i + 2].strip().replace("Prize: ", "").split(", ")
+
+        machines.append(ClawMachineSettings(
+            ax=int(a_move[0].replace("X+", "")),
+            ay=int(a_move[1].replace("Y+", "")),
+            bx=int(b_move[0].replace("X+", "")),
+            by=int(b_move[1].replace("Y+", "")),
+            prize_x=int(prize[0].replace("X=", "")),
+            prize_y=int(prize[1].replace("Y=", ""))
+        ))
+
+    return machines
+
+def calculate_price(machine: ClawMachineSettings) -> Optional[int]:
+    det = machine.ay * machine.bx - machine.ax * machine.by
+    if det == 0:
+        return None
+
+    b = (machine.ay * machine.prize_x - machine.ax * machine.prize_y) // det
+    a = (machine.prize_x - b * machine.bx) // machine.ax if machine.ax != 0 else 0
+
+    if (machine.ax * a + machine.bx * b == machine.prize_x and
+        machine.ay * a + machine.by * b == machine.prize_y and
+        a >= 0 and b >= 0):
+        return a * 3 + b
+    return None
+
+def get_max_prize_for_min_tokens(input_data: List[str]) -> int:
+    machines = parse_claw_machine_input(input_data)
+    total_tokens = 0
+
+    for machine in machines:
+        tokens = calculate_price(machine)
+        if tokens is not None:
+            total_tokens += tokens
+
+    return total_tokens
 # endregion
 
 if __name__ == "__main__":

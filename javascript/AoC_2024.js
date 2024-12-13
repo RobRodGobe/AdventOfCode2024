@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day12a(), day12b());
+    console.log(day13a(), day13b());
 }
 
 function readDayFile(day){
@@ -1128,4 +1128,94 @@ function countSides(borders) {
     return numSides;
 }
 // #endregion
+
+// #region Day13
+function day13a() {
+    const file = readDayFile(13).split("\n");
+    return getMaxPrizeForMinTokens(file);
+}
+
+function day13b() {
+    const file = readDayFile(13).split("\n");
+    const machines = parseClawMachineInput(file);
+
+    machines.forEach(machine => {
+        machine.prizeX += 10_000_000_000_000;
+        machine.prizeY += 10_000_000_000_000;
+    });
+
+    const adjustedInput = [];
+    machines.forEach(machine => {
+        adjustedInput.push(`Button A: X+${machine.ax}, Y+${machine.ay}`);
+        adjustedInput.push(`Button B: X+${machine.bx}, Y+${machine.by}`);
+        adjustedInput.push(`Prize: X=${machine.prizeX}, Y=${machine.prizeY}`);
+    });
+
+    return getMaxPrizeForMinTokens(adjustedInput);
+}
+
+class ClawMachineSettings {
+    constructor(ax, ay, bx, by, prizeX, prizeY) {
+        this.ax = ax;
+        this.ay = ay;
+        this.bx = bx;
+        this.by = by;
+        this.prizeX = prizeX;
+        this.prizeY = prizeY;
+    }
+}
+
+function parseClawMachineInput(inputData) {
+    const machines = [];
+    const cleanedData = inputData.filter(line => line.trim() !== "");
+
+    for (let i = 0; i < cleanedData.length; i += 3) {
+        const aMove = cleanedData[i].replace("Button A: ", "").split(", ");
+        const bMove = cleanedData[i + 1].replace("Button B: ", "").split(", ");
+        const prize = cleanedData[i + 2].replace("Prize: ", "").split(", ");
+
+        machines.push(new ClawMachineSettings(
+            parseInt(aMove[0].replace("X+", "")),
+            parseInt(aMove[1].replace("Y+", "")),
+            parseInt(bMove[0].replace("X+", "")),
+            parseInt(bMove[1].replace("Y+", "")),
+            parseInt(prize[0].replace("X=", "")),
+            parseInt(prize[1].replace("Y=", ""))
+        ));
+    }
+
+    return machines;
+}
+
+function calculatePrice(machine) {
+    const det = machine.ay * machine.bx - machine.ax * machine.by;
+    if (det === 0) return null;
+
+    const b = Math.floor((machine.ay * machine.prizeX - machine.ax * machine.prizeY) / det);
+    const a = machine.ax !== 0 ? Math.floor((machine.prizeX - b * machine.bx) / machine.ax) : 0;
+
+    if (machine.ax * a + machine.bx * b === machine.prizeX &&
+        machine.ay * a + machine.by * b === machine.prizeY &&
+        a >= 0 && b >= 0) {
+        return a * 3 + b;
+    }
+
+    return null;
+}
+
+function getMaxPrizeForMinTokens(inputData) {
+    const machines = parseClawMachineInput(inputData);
+    let totalTokens = 0;
+
+    machines.forEach(machine => {
+        const tokens = calculatePrice(machine);
+        if (tokens !== null) {
+            totalTokens += tokens;
+        }
+    });
+
+    return totalTokens;
+}
+// #endregion
+
 main();

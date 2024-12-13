@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day12a());
+            Console.WriteLine(Day13a());
             /* Part b */
-            Console.WriteLine(Day12b());
+            Console.WriteLine(Day13b());
         }
 
         static string[] ReadDayFile(int day)
@@ -1418,6 +1418,116 @@ namespace AoC_2024
 
             return numSides;
         }
+        #endregion
+    
+        #region Day13
+        static long Day13a()
+        {
+            string[] file = ReadDayFile(13);
+            return GetMaxPrizeForMinTokens(file);
+        }
+
+        static long Day13b()
+        {
+            string[] file = ReadDayFile(13);
+            List<ClawMachineSettings> machines = ParseClawMachineInput(file);
+
+            for (int i = 0; i < machines.Count(); i++)
+            {
+                machines[i].PrizeX += 10_000_000_000_000;
+                machines[i].PrizeY += 10_000_000_000_000;
+            }
+
+            List<string> adjustedInput = new List<string>();
+            for (int i = 0; i < machines.Count(); i++)
+            {
+                adjustedInput.Add($"Button A: X+{machines[i].AX}, Y+{machines[i].AY}");
+                adjustedInput.Add($"Button B: X+{machines[i].BX}, Y+{machines[i].BY}");
+                adjustedInput.Add($"Prize: X={machines[i].PrizeX}, Y={machines[i].PrizeY}");
+            }
+
+            return GetMaxPrizeForMinTokens(adjustedInput.ToArray());
+        }        
+
+        static List<ClawMachineSettings> ParseClawMachineInput(string[] input)
+        {
+            var machines = new List<ClawMachineSettings>();
+            var cleanedData = input.Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
+
+            for (int i = 0; i < cleanedData.Length; i += 3)
+            {
+                var aMove = cleanedData[i].Replace("Button A: ", "").Split(", ");
+                var bMove = cleanedData[i + 1].Replace("Button B: ", "").Split(", ");
+                var prize = cleanedData[i + 2].Replace("Prize: ", "").Split(", ");
+
+                machines.Add(new ClawMachineSettings(
+                    int.Parse(aMove[0].Replace("X+", "")),
+                    int.Parse(aMove[1].Replace("Y+", "")),
+                    int.Parse(bMove[0].Replace("X+", "")),
+                    int.Parse(bMove[1].Replace("Y+", "")),
+                    long.Parse(prize[0].Replace("X=", "")),
+                    long.Parse(prize[1].Replace("Y=", ""))
+                ));
+            }
+
+            return machines;
+        }
+
+        static long? CalculatePrice(ClawMachineSettings machine)
+        {
+            long det = machine.AY * machine.BX - machine.AX * machine.BY;
+            if (det == 0) return null;
+
+            long b = (machine.AY * machine.PrizeX - machine.AX * machine.PrizeY) / det;
+            long a = machine.AX != 0 ? (machine.PrizeX - b * machine.BX) / machine.AX : 0;
+
+            if (machine.AX * a + machine.BX * b == machine.PrizeX &&
+                machine.AY * a + machine.BY * b == machine.PrizeY &&
+                a >= 0 && b >= 0)
+            {
+                return a * 3 + b;
+            }
+
+            return null;
+        }
+
+        static long GetMaxPrizeForMinTokens(string[] input)
+        {
+            var machines = ParseClawMachineInput(input);
+            long totalTokens = 0;
+
+            foreach (var machine in machines)
+            {
+                var tokens = CalculatePrice(machine);
+                if (tokens.HasValue)
+                {
+                    totalTokens += tokens.Value;
+                }
+            }
+
+            return totalTokens;
+        }
+
+        public class ClawMachineSettings
+        {
+            public int AX { get; set; }
+            public int AY { get; set; }
+            public int BX { get; set; }
+            public int BY { get; set; }
+            public long PrizeX { get; set; }
+            public long PrizeY { get; set; }
+
+            public ClawMachineSettings(int ax, int ay, int bx, int by, long prizeX, long prizeY)
+            {
+                AX = ax;
+                AY = ay;
+                BX = bx;
+                BY = by;
+                PrizeX = prizeX;
+                PrizeY = prizeY;
+            }
+        }
+
         #endregion
     }
 }
