@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day13a(), day13b());
+    console.log(day14a(), day14b());
 }
 
 function readDayFile(day){
@@ -1215,6 +1215,158 @@ function getMaxPrizeForMinTokens(inputData) {
     });
 
     return totalTokens;
+}
+// #endregion
+
+// #region Day14
+function day14a() {
+    const file = readDayFile(14).split("\n");
+
+    return calculateSafetyFactor(file);
+}
+
+function day14b() {
+    const file = readDayFile(14).split("\n");
+
+    return findRobotSequenceTime(file);
+}
+
+class BathroomRobot {
+    constructor(P, V) {
+        this.P = P;
+        this.V = V;
+    }
+
+    static simulateRobot(robot, modRows, modCols, ticks) {
+        const rowDelta = BathroomRobot.calculateDelta(robot.V.Y, ticks, modRows);
+        const newRow = BathroomRobot.modAdd(robot.P.Y, rowDelta, modRows);
+
+        const colDelta = BathroomRobot.calculateDelta(robot.V.X, ticks, modCols);
+        const newCol = BathroomRobot.modAdd(robot.P.X, colDelta, modCols);
+
+        return new BathroomRobot({X: newCol, Y: newRow}, robot.V);
+    }
+
+    static calculateDelta(velocity, ticks, mod) {
+        let delta = velocity * ticks % mod;
+        return delta < 0 ? delta + mod : delta;
+    }
+
+    static modAdd(a, b, mod) {
+        let res = (a + b) % mod;
+        return res < 0 ? res + mod : res;
+    }
+}
+
+function calculateSafetyFactor(file) {
+    const width = 101;
+    const height = 103;
+    const duration = 100;
+
+    const robots = parseRobots(file);
+    const finalPositions = calculateFinalPositions(robots, width, height, duration);
+
+    return computeQuadrantMultiplier(finalPositions, width, height);
+}
+
+function parseRobots(lines) {
+    return lines
+        .filter(line => line.trim() !== '')
+        .map(parseSingleRobot);
+}
+
+function parseSingleRobot(line) {
+    const parts = line.split(' ');
+    const p = parts[0].substring(2).split(',');
+    const v = parts[1].substring(2).split(',');
+
+    return new BathroomRobot(
+        {X: parseInt(p[0]), Y: parseInt(p[1])},
+        {X: parseInt(v[0]), Y: parseInt(v[1])}
+    );
+}
+
+function calculateFinalPositions(robots, width, height, duration) {
+    const finalPositions = Array.from({length: width}, () => 
+        Array(height).fill(0)
+    );
+
+    for (const robot of robots) {
+        let finalX = (robot.P.X + robot.V.X * duration) % width;
+        let finalY = (robot.P.Y + robot.V.Y * duration) % height;
+
+        finalX = finalX < 0 ? finalX + width : finalX;
+        finalY = finalY < 0 ? finalY + height : finalY;
+
+        finalPositions[finalX][finalY]++;
+    }
+
+    return finalPositions;
+}
+
+function computeQuadrantMultiplier(finalPositions, width, height) {
+    const midX = Math.floor(width / 2);
+    const midY = Math.floor(height / 2);
+
+    let topLeft = 0, topRight = 0, bottomLeft = 0, bottomRight = 0;
+
+    for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+            if (x === midX || y === midY) continue;
+
+            if (x < midX && y < midY) topLeft += finalPositions[x][y];
+            else if (x >= midX && y < midY) topRight += finalPositions[x][y];
+            else if (x < midX && y >= midY) bottomLeft += finalPositions[x][y];
+            else if (x >= midX && y >= midY) bottomRight += finalPositions[x][y];
+        }
+    }
+
+    return topLeft * topRight * bottomLeft * bottomRight;
+}
+
+function findRobotSequenceTime(file) {
+    const rows = 103;
+    const cols = 101;
+    const trunkSeqSize = 10;
+    const maxSeconds = 100000;
+
+    let robots = parseRobots(file);
+
+    for (let sec = 1; sec <= maxSeconds; sec++) {
+        const robotsByCol = Array.from({length: cols}, () => []);
+
+        for (let i = 0; i < robots.length; i++) {
+            const newRobot = BathroomRobot.simulateRobot(robots[i], rows, cols, 1);
+            robotsByCol[newRobot.P.X].push(newRobot.P.Y);
+            robots[i] = newRobot;
+        }
+
+        for (let c = 0; c < cols; c++) {
+            const column = robotsByCol[c];
+            column.sort((a, b) => a - b);
+
+            if (hasConsecutiveSequence(column, trunkSeqSize)) {
+                return sec;
+            }
+        }
+    }
+
+    return 0;
+}
+
+function hasConsecutiveSequence(sequence, requiredLength) {
+    if (sequence.length < requiredLength) return false;
+
+    let consecutiveCount = 1;
+    for (let i = 1; i < sequence.length; i++) {
+        consecutiveCount = sequence[i] === sequence[i-1] + 1 
+            ? consecutiveCount + 1 
+            : 1;
+
+        if (consecutiveCount === requiredLength) return true;
+    }
+
+    return false;
 }
 // #endregion
 

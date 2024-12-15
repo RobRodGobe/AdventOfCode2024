@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day13a());
+            Console.WriteLine(Day14a());
             /* Part b */
-            Console.WriteLine(Day13b());
+            Console.WriteLine(Day14b());
         }
 
         static string[] ReadDayFile(int day)
@@ -1528,6 +1528,182 @@ namespace AoC_2024
             }
         }
 
+        #endregion
+    
+        #region Day14
+        record struct BathroomRobot((int X, int Y) P, (int X, int Y) V);
+
+        static int Day14a()
+        {
+            string[] file = ReadDayFile(14);
+            return CalculateSafetyFactor(file);
+        }
+
+        static int Day14b()
+        {
+            string[] file = ReadDayFile(14);
+            return FindRobotSequenceTime(file);
+        }
+
+        static int CalculateSafetyFactor(string[] file)
+        {
+            const int width = 101;
+            const int height = 103;
+            const int duration = 100;
+
+            var robots = ParseRobots(file);
+            var finalPositions = CalculateFinalPositions(robots, width, height, duration);
+
+            return ComputeQuadrantMultiplier(finalPositions, width, height);
+        }
+
+        static BathroomRobot[] ParseRobots(string[] lines)
+        {
+            return lines
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Select(ParseSingleRobot)
+                .ToArray();
+        }
+
+        static BathroomRobot ParseSingleRobot(string line)
+        {
+            var parts = line.Split(' ');
+            var p = parts[0].Substring(2).Split(',');
+            var v = parts[1].Substring(2).Split(',');
+
+            return new BathroomRobot(
+                (int.Parse(p[0]), int.Parse(p[1])), 
+                (int.Parse(v[0]), int.Parse(v[1]))
+            );
+        }
+
+        static int[,] CalculateFinalPositions(BathroomRobot[] robots, int width, int height, int duration)
+        {
+            int[,] finalPositions = new int[width, height];
+
+            foreach (var robot in robots)
+            {
+                int finalX = (robot.P.X + robot.V.X * duration) % width;
+                int finalY = (robot.P.Y + robot.V.Y * duration) % height;
+
+                finalX = finalX < 0 ? finalX + width : finalX;
+                finalY = finalY < 0 ? finalY + height : finalY;
+
+                finalPositions[finalX, finalY]++;
+            }
+
+            return finalPositions;
+        }
+
+        static int ComputeQuadrantMultiplier(int[,] finalPositions, int width, int height)
+        {
+            int midX = width / 2;
+            int midY = height / 2;
+
+            int topLeft = 0, topRight = 0, bottomLeft = 0, bottomRight = 0;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (x == midX || y == midY) continue;
+
+                    if (x < midX && y < midY) topLeft += finalPositions[x, y];
+                    else if (x >= midX && y < midY) topRight += finalPositions[x, y];
+                    else if (x < midX && y >= midY) bottomLeft += finalPositions[x, y];
+                    else if (x >= midX && y >= midY) bottomRight += finalPositions[x, y];
+                }
+            }
+
+            return topLeft * topRight * bottomLeft * bottomRight;
+        }
+
+        static int FindRobotSequenceTime(string[] file)
+        {
+            const int rows = 103;
+            const int cols = 101;
+            const int trunkSeqSize = 10;
+            const int maxSeconds = 100000;
+
+            var robots = ParseRobots(file);
+
+            for (int sec = 1; sec <= maxSeconds; sec++)
+            {
+                var robotsByCol = new List<int>[cols];
+                for (int i = 0; i < cols; i++)
+                {
+                    robotsByCol[i] = new List<int>();
+                }
+
+                for (int i = 0; i < robots.Length; i++)
+                {
+                    var newRobot = SimulateRobot(robots[i], rows, cols, 1);
+                    robotsByCol[newRobot.P.X].Add(newRobot.P.Y);
+                    robots[i] = newRobot;
+                }
+
+                for (int c = 0; c < cols; c++)
+                {
+                    var column = robotsByCol[c];
+                    column.Sort();
+
+                    if (HasConsecutiveSequence(column, trunkSeqSize))
+                    {
+                        return sec;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        static bool HasConsecutiveSequence(List<int> sequence, int requiredLength)
+        {
+            if (sequence.Count < requiredLength) return false;
+
+            int consecutiveCount = 1;
+            for (int i = 1; i < sequence.Count; i++)
+            {
+                consecutiveCount = sequence[i] == sequence[i - 1] + 1 
+                    ? consecutiveCount + 1 
+                    : 1;
+
+                if (consecutiveCount == requiredLength) return true;
+            }
+
+            return false;
+        }
+
+        static BathroomRobot SimulateRobot(BathroomRobot robot, int modRows, int modCols, int ticks)
+        {
+            int rowDelta = CalculateDelta(robot.V.Y, ticks, modRows);
+            int newRow = ModAdd(robot.P.Y, rowDelta, modRows);
+
+            int colDelta = CalculateDelta(robot.V.X, ticks, modCols);
+            int newCol = ModAdd(robot.P.X, colDelta, modCols);
+
+            return new BathroomRobot((newCol, newRow), robot.V);
+        }
+
+        static int CalculateDelta(int velocity, int ticks, int mod)
+        {
+            int delta = velocity * ticks % mod;
+            if (delta < 0)
+            {
+                delta += mod;
+            }
+            return delta;
+        }
+
+        static int ModAdd(int a, int b, int mod)
+        {
+            int res = (a + b) % mod;
+            if (res < 0)
+            {
+                res += mod;
+            }
+            return res;
+        }
         #endregion
     }
 }

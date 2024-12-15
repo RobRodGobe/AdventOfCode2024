@@ -8,13 +8,14 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	fmt.Println(day13a())
-	fmt.Println(day13b())
+	fmt.Println(day14a())
+	fmt.Println(day14b())
 }
 
 // region Day1
@@ -1500,6 +1501,197 @@ func GetMaxPrizeForMinTokens(input []string) int64 {
 	}
 
 	return totalTokens
+}
+
+// endregion
+
+// region Day14
+func day14a() int {
+	file := strings.Split(readDayFile(14), "\n")
+
+	return calculateSafetyFactor(file)
+}
+
+func day14b() int {
+	file := strings.Split(readDayFile(14), "\n")
+
+	return findRobotSequenceTime(file)
+}
+
+type BathroomRobot struct {
+	P struct{ X, Y int }
+	V struct{ X, Y int }
+}
+
+func simulateRobot(robot BathroomRobot, modRows, modCols, ticks int) BathroomRobot {
+	rowDelta := calculateDelta(robot.V.Y, ticks, modRows)
+	newRow := modAdd(robot.P.Y, rowDelta, modRows)
+
+	colDelta := calculateDelta(robot.V.X, ticks, modCols)
+	newCol := modAdd(robot.P.X, colDelta, modCols)
+
+	return BathroomRobot{
+		P: struct{ X, Y int }{X: newCol, Y: newRow},
+		V: robot.V,
+	}
+}
+
+func calculateDelta(velocity, ticks, mod int) int {
+	delta := velocity * ticks % mod
+	if delta < 0 {
+		delta += mod
+	}
+	return delta
+}
+
+func modAdd(a, b, mod int) int {
+	res := (a + b) % mod
+	if res < 0 {
+		res += mod
+	}
+	return res
+}
+
+func calculateSafetyFactor(file []string) int {
+	width, height := 101, 103
+	duration := 100
+
+	robots := parseRobots(file)
+	finalPositions := calculateFinalPositions(robots, width, height, duration)
+
+	return computeQuadrantMultiplier(finalPositions, width, height)
+}
+
+func parseRobots(lines []string) []BathroomRobot {
+	var robots []BathroomRobot
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			robots = append(robots, parseSingleRobot(line))
+		}
+	}
+	return robots
+}
+
+func parseSingleRobot(line string) BathroomRobot {
+	parts := strings.Split(line, " ")
+	p := strings.Split(parts[0][2:], ",")
+	v := strings.Split(parts[1][2:], ",")
+
+	px, _ := strconv.Atoi(p[0])
+	py, _ := strconv.Atoi(p[1])
+	vx, _ := strconv.Atoi(v[0])
+	vy, _ := strconv.Atoi(v[1])
+
+	return BathroomRobot{
+		P: struct{ X, Y int }{X: px, Y: py},
+		V: struct{ X, Y int }{X: vx, Y: vy},
+	}
+}
+
+func calculateFinalPositions(robots []BathroomRobot, width, height, duration int) [][]int {
+	finalPositions := make([][]int, width)
+	for i := range finalPositions {
+		finalPositions[i] = make([]int, height)
+	}
+
+	for _, robot := range robots {
+		finalX := (robot.P.X + robot.V.X*duration) % width
+		finalY := (robot.P.Y + robot.V.Y*duration) % height
+
+		if finalX < 0 {
+			finalX += width
+		}
+		if finalY < 0 {
+			finalY += height
+		}
+
+		finalPositions[finalX][finalY]++
+	}
+
+	return finalPositions
+}
+
+func computeQuadrantMultiplier(finalPositions [][]int, width, height int) int {
+	midX, midY := width/2, height/2
+
+	topLeft := 0
+	topRight := 0
+	bottomLeft := 0
+	bottomRight := 0
+
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			if x == midX || y == midY {
+				continue
+			}
+
+			switch {
+			case x < midX && y < midY:
+				topLeft += finalPositions[x][y]
+			case x >= midX && y < midY:
+				topRight += finalPositions[x][y]
+			case x < midX && y >= midY:
+				bottomLeft += finalPositions[x][y]
+			case x >= midX && y >= midY:
+				bottomRight += finalPositions[x][y]
+			}
+		}
+	}
+
+	return topLeft * topRight * bottomLeft * bottomRight
+}
+
+func findRobotSequenceTime(file []string) int {
+	rows, cols := 103, 101
+	trunkSeqSize := 10
+	maxSeconds := 100000
+
+	robots := parseRobots(file)
+
+	for sec := 1; sec <= maxSeconds; sec++ {
+		robotsByCol := make([][]int, cols)
+		for i := range robotsByCol {
+			robotsByCol[i] = []int{}
+		}
+
+		for i := range robots {
+			newRobot := simulateRobot(robots[i], rows, cols, 1)
+			robotsByCol[newRobot.P.X] = append(robotsByCol[newRobot.P.X], newRobot.P.Y)
+			robots[i] = newRobot
+		}
+
+		for c := 0; c < cols; c++ {
+			column := robotsByCol[c]
+			sort.Ints(column)
+
+			if hasConsecutiveSequence(column, trunkSeqSize) {
+				return sec
+			}
+		}
+	}
+
+	return 0
+}
+
+func hasConsecutiveSequence(sequence []int, requiredLength int) bool {
+	if len(sequence) < requiredLength {
+		return false
+	}
+
+	consecutiveCount := 1
+	for i := 1; i < len(sequence); i++ {
+		if sequence[i] == sequence[i-1]+1 {
+			consecutiveCount++
+		} else {
+			consecutiveCount = 1
+		}
+
+		if consecutiveCount == requiredLength {
+			return true
+		}
+	}
+
+	return false
 }
 
 // endregion

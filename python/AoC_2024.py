@@ -1,10 +1,10 @@
 import re
 import math
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 def main():
     # Day 1
-    print(day13a(), day13b())
+    print(day14a(), day14b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -979,6 +979,137 @@ def get_max_prize_for_min_tokens(input_data: List[str]) -> int:
             total_tokens += tokens
 
     return total_tokens
+# endregion
+
+# region Day14
+def day14a():
+    file = readDayFile(14)
+    
+    return calculate_safety_factor(file)
+
+def day14b():
+    file = readDayFile(14)
+
+    return find_robot_sequence_time(file)
+
+class BathroomRobot:
+    def __init__(self, P: Tuple[int, int], V: Tuple[int, int]):
+        self.P = P
+        self.V = V
+
+    @staticmethod
+    def simulate_robot(robot, mod_rows: int, mod_cols: int, ticks: int):
+        row_delta = BathroomRobot.calculate_delta(robot.V[1], ticks, mod_rows)
+        new_row = BathroomRobot.mod_add(robot.P[1], row_delta, mod_rows)
+
+        col_delta = BathroomRobot.calculate_delta(robot.V[0], ticks, mod_cols)
+        new_col = BathroomRobot.mod_add(robot.P[0], col_delta, mod_cols)
+
+        return BathroomRobot((new_col, new_row), robot.V)
+
+    @staticmethod
+    def calculate_delta(velocity: int, ticks: int, mod: int) -> int:
+        delta = velocity * ticks % mod
+        return delta + mod if delta < 0 else delta
+
+    @staticmethod
+    def mod_add(a: int, b: int, mod: int) -> int:
+        res = (a + b) % mod
+        return res + mod if res < 0 else res
+    
+def calculate_safety_factor(file: List[str]) -> int:
+    width, height = 101, 103
+    duration = 100
+
+    robots = parse_robots(file)
+    final_positions = calculate_final_positions(robots, width, height, duration)
+
+    return compute_quadrant_multiplier(final_positions, width, height)
+
+def parse_robots(lines: List[str]) -> List[BathroomRobot]:
+    return [parse_single_robot(line) for line in lines if line.strip()]
+
+def parse_single_robot(line: str) -> BathroomRobot:
+    parts = line.split()
+    p = parts[0][2:].split(',')
+    v = parts[1][2:].split(',')
+
+    return BathroomRobot(
+        (int(p[0]), int(p[1])), 
+        (int(v[0]), int(v[1]))
+    )
+
+def calculate_final_positions(robots: List[BathroomRobot], width: int, height: int, duration: int):
+    final_positions = [[0 for _ in range(height)] for _ in range(width)]
+
+    for robot in robots:
+        final_x = (robot.P[0] + robot.V[0] * duration) % width
+        final_y = (robot.P[1] + robot.V[1] * duration) % height
+
+        final_x = final_x + width if final_x < 0 else final_x
+        final_y = final_y + height if final_y < 0 else final_y
+
+        final_positions[final_x][final_y] += 1
+
+    return final_positions
+
+def compute_quadrant_multiplier(final_positions: List[List[int]], width: int, height: int) -> int:
+    mid_x, mid_y = width // 2, height // 2
+
+    top_left = top_right = bottom_left = bottom_right = 0
+
+    for x in range(width):
+        for y in range(height):
+            if x == mid_x or y == mid_y:
+                continue
+
+            if x < mid_x and y < mid_y:
+                top_left += final_positions[x][y]
+            elif x >= mid_x and y < mid_y:
+                top_right += final_positions[x][y]
+            elif x < mid_x and y >= mid_y:
+                bottom_left += final_positions[x][y]
+            elif x >= mid_x and y >= mid_y:
+                bottom_right += final_positions[x][y]
+
+    return top_left * top_right * bottom_left * bottom_right
+
+def find_robot_sequence_time(file: List[str]) -> int:
+    rows, cols = 103, 101
+    trunk_seq_size = 10
+    max_seconds = 100000
+
+    robots = parse_robots(file)
+
+    for sec in range(1, max_seconds + 1):
+        robots_by_col = [[] for _ in range(cols)]
+
+        for i in range(len(robots)):
+            new_robot = BathroomRobot.simulate_robot(robots[i], rows, cols, 1)
+            robots_by_col[new_robot.P[0]].append(new_robot.P[1])
+            robots[i] = new_robot
+
+        for c in range(cols):
+            column = robots_by_col[c]
+            column.sort()
+
+            if has_consecutive_sequence(column, trunk_seq_size):
+                return sec
+
+    return 0
+
+def has_consecutive_sequence(sequence: List[int], required_length: int) -> bool:
+    if len(sequence) < required_length:
+        return False
+
+    consecutive_count = 1
+    for i in range(1, len(sequence)):
+        consecutive_count = consecutive_count + 1 if sequence[i] == sequence[i-1] + 1 else 1
+
+        if consecutive_count == required_length:
+            return True
+
+    return False
 # endregion
 
 if __name__ == "__main__":
