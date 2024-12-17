@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day15a(), day15b());
+    console.log(day16a(), day16b());
 }
 
 function readDayFile(day){
@@ -1531,6 +1531,166 @@ function parseInput(file) {
     const inputMap = sections[0].split("\n");
     const moves = sections[1].replace(/\s/g, "").split("");
     return { inputMap, moves };
+}
+// #endregion
+
+// #region Day16
+function day16a() {
+    const file = readDayFile(16).split("\n");
+    const rows = file.length;
+    const cols = file[0].length;
+    const map = Array.from({ length: cols }, () => Array(rows).fill(null));
+
+    let start = [0, 0];
+    let end = [0, 0];
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            map[x][y] = file[y][x];
+            if (file[y][x] === "S") start = [x, y];
+            if (file[y][x] === "E") end = [x, y];
+        }
+    }
+
+    const output = dijkstraShortestPath(map, start, [1, 0]);
+
+    return Math.min(
+        ...CardinalDirections.map((v) => output.cost[`${end}:${v}`] || Infinity)
+    );
+}
+
+function day16b() {
+    const file = readDayFile(16).split("\n");
+    const rows = file.length;
+    const cols = file[0].length;
+    const map = Array.from({ length: cols }, () => Array(rows).fill(null));
+
+    let start = [0, 0];
+    let end = [0, 0];
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            map[x][y] = file[y][x];
+            if (file[y][x] === "S") start = [x, y];
+            if (file[y][x] === "E") end = [x, y];
+        }
+    }
+
+    const output = dijkstraShortestPath(map, start, [1, 0]);
+
+    const min = Math.min(
+        ...CardinalDirections.map((v) => output.cost[`${end}:${v}`] || Infinity)
+    );
+
+    const seats = new Set();
+    CardinalDirections.filter((v) => output.cost[`${end}:${v}`] === min).forEach(
+        (v) => {
+            backtrack(output.prevs, start, end, v, new Set()).forEach((seat) =>
+                seats.add(seat)
+            );
+        }
+    );
+
+    return seats.size;
+}
+
+class PriorityQueue {
+    constructor() {
+        this.items = [];
+    }
+
+    enqueue(element, priority) {
+        this.items.push({ element, priority });
+        this.items.sort((a, b) => a.priority - b.priority);
+    }
+
+    dequeue() {
+        return this.items.shift().element;
+    }
+
+    isEmpty() {
+        return this.items.length === 0;
+    }
+}
+const CardinalDirections = [
+    [0, -1],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+];
+
+function dijkstraShortestPath(map, start, dir) {
+    const w = map.length;
+    const h = map[0].length;
+
+    const cost = {};
+    const visited = new Set();
+    const prevs = {};
+
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+            CardinalDirections.forEach((v) => {
+                cost[`${[x, y]}:${v}`] = Infinity;
+                prevs[`${[x, y]}:${v}`] = [];
+            });
+        }
+    }
+    cost[`${start}:${dir}`] = 0;
+
+    const queue = new PriorityQueue();
+    queue.enqueue([start, dir], 0);
+
+    while (!queue.isEmpty()) {
+        const [[x, y], v] = queue.dequeue();
+        if (map[x][y] === "E") break;
+        if (visited.has(`${[x, y]}:${v}`)) continue;
+
+        visited.add(`${[x, y]}:${v}`);
+
+        getNeighbours([x, y], v).forEach(([next, vNext, cNext]) => {
+            if (map[next[0]][next[1]] !== "#") {
+                const nextCost = cost[`${[x, y]}:${v}`] + cNext;
+                if (nextCost <= cost[`${next}:${vNext}`]) {
+                    cost[`${next}:${vNext}`] = nextCost;
+                    prevs[`${next}:${vNext}`].push([[x, y], v]);
+                    queue.enqueue([next, vNext], nextCost);
+                }
+            }
+        });
+    }
+
+    return { cost, prevs };
+}
+
+function getNeighbours([x, y], [dx, dy]) {
+    const costs = [1, 1000, 2000, 1000];
+
+    const nbs = [];
+    for (let i = 0; i < 4; i++) {
+        const next = i === 0 ? [x + dx, y + dy] : [x, y];
+        nbs.push([next, [dx, dy], costs[i]]);
+
+        // Rotate direction
+        const tmp = dx;
+        dx = -dy;
+        dy = tmp;
+    }
+
+    return nbs;
+}
+
+function backtrack(prevs, start, [x, y], [dx, dy], acc) {
+    acc.add(`${x},${y}`);
+    if (x === start[0] && y === start[1]) return acc;
+
+    const path = new Set();
+    (prevs[`${[x, y]}:${[dx, dy]}`] || []).forEach(([parentP, parentV]) => {
+        backtrack(prevs, start, parentP, parentV, acc).forEach((p) =>
+            path.add(p)
+        );
+    });
+
+    path.forEach((p) => acc.add(p));
+
+    return acc;
 }
 // #endregion
 
