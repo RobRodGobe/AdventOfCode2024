@@ -14,8 +14,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day14a())
-	fmt.Println(day14b())
+	fmt.Println(day15a())
+	fmt.Println(day15b())
 }
 
 // region Day1
@@ -1692,6 +1692,202 @@ func hasConsecutiveSequence(sequence []int, requiredLength int) bool {
 	}
 
 	return false
+}
+
+// endregion
+
+// region Day15
+func day15a() int {
+	file := readDayFile(15)
+	sections := strings.Split(file, "\n\n")
+	inputMap := strings.Split(sections[0], "\n")
+	moves := strings.ReplaceAll(sections[1], " ", "")
+
+	mapTiles := make(map[Vector]rune)
+	robotPos := Zero
+
+	for row, line := range inputMap {
+		for col, tile := range line {
+			pos := Vector{row, col}
+			if tile == '#' || tile == 'O' {
+				mapTiles[pos] = tile
+			} else if tile == '@' {
+				robotPos = pos
+			}
+		}
+	}
+
+	directions := map[rune]Vector{
+		'>': Right,
+		'v': Down,
+		'<': Left,
+		'^': Up,
+	}
+
+	for _, move := range moves {
+		dir := directions[rune(move)]
+		var thingsToPush []rune
+		next := add(robotPos, dir)
+
+		for tile, ok := mapTiles[next]; ok; tile, ok = mapTiles[next] {
+			thingsToPush = append(thingsToPush, tile)
+			if tile == '#' {
+				break
+			}
+			next = add(next, dir)
+		}
+
+		if len(thingsToPush) == 0 {
+			robotPos = add(robotPos, dir)
+		} else if thingsToPush[len(thingsToPush)-1] == 'O' {
+			for i := range thingsToPush {
+				delete(mapTiles, add(robotPos, scale(dir, 1+i)))
+			}
+			for i, tile := range thingsToPush {
+				mapTiles[add(robotPos, scale(dir, 2+i))] = tile
+			}
+			robotPos = add(robotPos, dir)
+		}
+	}
+
+	total := 0
+	for pos, tile := range mapTiles {
+		if tile == 'O' {
+			total += 100*pos.Row + pos.Col
+		}
+	}
+	return total
+}
+
+func day15b() int {
+	file := readDayFile(15)
+	sections := strings.Split(file, "\n\n")
+	inputMap := strings.Split(sections[0], "\n")
+	moves := strings.ReplaceAll(sections[1], " ", "")
+
+	mapTiles := make(map[Vector]*Obstacle)
+	robotPos := Zero
+
+	for row, line := range inputMap {
+		for col, tile := range line {
+			pos := Vector{row, col * 2}
+			if tile == '#' || tile == 'O' {
+				right := add(pos, Right)
+				obstacle := &Obstacle{Tile: tile, Left: pos, Right: right}
+				mapTiles[pos] = obstacle
+				mapTiles[right] = obstacle
+			} else if tile == '@' {
+				robotPos = pos
+			}
+		}
+	}
+
+	directions := map[rune]Vector{
+		'>': Right,
+		'v': Down,
+		'<': Left,
+		'^': Up,
+	}
+
+	for _, move := range moves {
+		dir := directions[rune(move)]
+		thingsToPush := getBoxesToPush(mapTiles, add(robotPos, dir), dir)
+
+		if len(thingsToPush) == 0 {
+			robotPos = add(robotPos, dir)
+		} else {
+			hasWall := false
+			for _, obstacle := range thingsToPush {
+				if obstacle.Tile == '#' {
+					hasWall = true
+					break
+				}
+			}
+			if hasWall {
+				continue
+			}
+
+			for _, obstacle := range thingsToPush {
+				delete(mapTiles, obstacle.Left)
+				delete(mapTiles, obstacle.Right)
+			}
+			for _, obstacle := range thingsToPush {
+				newObstacle := &Obstacle{
+					Tile:  obstacle.Tile,
+					Left:  add(obstacle.Left, dir),
+					Right: add(obstacle.Right, dir),
+				}
+				mapTiles[newObstacle.Left] = newObstacle
+				mapTiles[newObstacle.Right] = newObstacle
+			}
+			robotPos = add(robotPos, dir)
+		}
+	}
+
+	coordinates := make(map[Vector]bool)
+	for _, obstacle := range mapTiles {
+		if obstacle.Tile == 'O' {
+			coordinates[obstacle.Left] = true
+		}
+	}
+
+	total := 0
+	for coord := range coordinates {
+		total += 100*coord.Row + coord.Col
+	}
+	return total
+}
+
+type Obstacle struct {
+	Tile  rune
+	Left  Vector
+	Right Vector
+}
+
+func getBoxesToPush(mapTiles map[Vector]*Obstacle, pos Vector, dir Vector) map[Vector]*Obstacle {
+	results := make(map[Vector]*Obstacle)
+	if obstacle, exists := mapTiles[pos]; exists {
+		results[pos] = obstacle
+		if obstacle.Tile == 'O' {
+			if dir == Left {
+				for k, v := range getBoxesToPush(mapTiles, add(obstacle.Left, Left), dir) {
+					results[k] = v
+				}
+			} else if dir == Right {
+				for k, v := range getBoxesToPush(mapTiles, add(obstacle.Right, Right), dir) {
+					results[k] = v
+				}
+			} else {
+				for k, v := range getBoxesToPush(mapTiles, add(obstacle.Left, dir), dir) {
+					results[k] = v
+				}
+				for k, v := range getBoxesToPush(mapTiles, add(obstacle.Right, dir), dir) {
+					results[k] = v
+				}
+			}
+		}
+	}
+	return results
+}
+
+type Vector struct {
+	Row, Col int
+}
+
+var (
+	Zero  = Vector{0, 0}
+	Up    = Vector{-1, 0}
+	Down  = Vector{1, 0}
+	Left  = Vector{0, -1}
+	Right = Vector{0, 1}
+)
+
+func add(a, b Vector) Vector {
+	return Vector{a.Row + b.Row, a.Col + b.Col}
+}
+
+func scale(v Vector, factor int) Vector {
+	return Vector{v.Row * factor, v.Col * factor}
 }
 
 // endregion

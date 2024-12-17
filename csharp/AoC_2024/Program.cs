@@ -1710,321 +1710,226 @@ namespace AoC_2024
         static long Day15a()
         {
             string[] file = ReadDayFile(15);
+            var sections = String.Join("\n", file).Split("\n\n");
+            var inputMap = sections[0].Split('\n');
+            Dictionary<RobotVector, char> map = new Dictionary<RobotVector, char>();
+            RobotVector robotPos = RobotVector.Zero;
 
-            var mapLines = file.TakeWhile(line => !string.IsNullOrEmpty(line)).Select(line => line.ToCharArray()).ToArray();
-            var moves = file.SkipWhile(line => !string.IsNullOrEmpty(line)).Skip(1).SelectMany(line => line).Select(
-                move => move switch
-                {
-                    '^' => MoveWareHouseRobot.Up,
-                    'v' => MoveWareHouseRobot.Down,
-                    '<' => MoveWareHouseRobot.Left,
-                    '>' => MoveWareHouseRobot.Right,
-                    _ => throw new Exception("Invalid move")
-                }).ToArray();
-
-            WarehouseMap partOneMap = new WarehouseMap(mapLines);
-            foreach (var move in moves)
+            for (int row = 0; row < inputMap.Length; row++)
             {
-                partOneMap.MoveRobot(move);
+                for (int col = 0; col < inputMap[row].Length; col++)
+                {
+                    RobotVector pos = new RobotVector(row, col);
+                    char tile = inputMap[row][col];
+                    if (tile == '#' || tile == 'O')
+                    {
+                        map[pos] = tile;
+                    }
+                    else if (tile == '@')
+                    {
+                        robotPos = pos;
+                    }
+                }
             }
 
-            return partOneMap.SumOfGPSCoordinates;
+            char[] moves = sections[1].Where(c => !char.IsWhiteSpace(c)).ToArray();
+
+            foreach (char move in moves)
+            {
+                RobotVector dir = move switch
+                {
+                    '>' => RobotVector.Right,
+                    'v' => RobotVector.Down,
+                    '<' => RobotVector.Left,
+                    '^' => RobotVector.Up,
+                    _ => throw new Exception("Invalid direction")
+                };
+                List<char> thingsToPush = new();
+                RobotVector next = robotPos + dir;
+                while (true)
+                {
+                    if (map.TryGetValue(next, out var tile))
+                    {
+                        thingsToPush.Add(tile);
+                        if (tile == '#')
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            next += dir;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                if (thingsToPush.Count == 0)
+                {
+                    robotPos += dir;
+                }
+                else if (thingsToPush.Last() == 'O')
+                {
+                    for (int i = 0; i < thingsToPush.Count; i++)
+                    {
+                        map.Remove(robotPos + dir.Scale(1 + i));
+                    }
+                    for (int i = 0; i < thingsToPush.Count; i++)
+                    {
+                        map[robotPos + dir.Scale(2 + i)] = thingsToPush[i];
+                    }
+                    robotPos += dir;
+                }
+            }
+
+            long total = 0;
+            foreach (var (Position, Tile) in map)
+            {
+                if (Tile == 'O')
+                {
+                    var coordinate = 100 * Position.Row + Position.Col;
+                    total += coordinate;
+                }
+            }
+            return total;
         }
 
         static long Day15b()
         {
             string[] file = ReadDayFile(15);
-
-            var mapLines = file.TakeWhile(line => !string.IsNullOrEmpty(line)).Select(line => line.ToCharArray()).ToArray();
-            var moves = file.SkipWhile(line => !string.IsNullOrEmpty(line)).Skip(1).SelectMany(line => line).Select(
-                move => move switch
-                {
-                    '^' => MoveWareHouseRobot.Up,
-                    'v' => MoveWareHouseRobot.Down,
-                    '<' => MoveWareHouseRobot.Left,
-                    '>' => MoveWareHouseRobot.Right,
-                    _ => throw new Exception("Invalid move")
-                }).ToArray();
-
-            var partTwoMapLines = mapLines.Select(line =>
+            var sections = String.Join("\n", file).Split("\n\n");
+            var inputMap = sections[0].Split('\n');
+            Dictionary<RobotVector, Obstacle> map = new();
+            RobotVector robotPos = RobotVector.Zero;
+            for (int row = 0; row < inputMap.Length; row++)
             {
-                var expandedLine = "";
-                foreach (var c in line)
+                for (int col = 0; col < inputMap[row].Length; col++)
                 {
-                    expandedLine += (c switch
+                    RobotVector pos = new RobotVector(row, col * 2);
+                    char tile = inputMap[row][col];
+                    if (tile == '#' || tile == 'O')
                     {
-                        '#' => "##",
-                        'O' => "[]",
-                        '.' => "..",
-                        '@' => "@.",
-                        _ => throw new Exception("Invalid character")
-                    });
+                        RobotVector right = pos + RobotVector.Right;
+                        Obstacle obstacle = new(tile, pos, right);
+                        map[pos] = obstacle;
+                        map[right] = obstacle;
+                    }
+                    else if (tile == '@')
+                    {
+                        robotPos = pos;
+                    }
                 }
-                return expandedLine.ToCharArray();
-            }).ToArray();
-
-            WarehouseMap partTwoMap = new WarehouseMap(partTwoMapLines, partTwoObjects: true);
-            foreach (var move in moves)
-            {
-                partTwoMap.MoveRobot(move);
             }
 
-            return partTwoMap.SumOfGPSCoordinates;
-        }
+            char[] moves = sections[1].Where(c => !char.IsWhiteSpace(c)).ToArray();
 
-        enum MoveWareHouseRobot { Up, Down, Left, Right }
-
-        class WarehouseMap
-        {
-            private bool partTwoObjects = false;
-            private Vector2i robotPosition;
-            private char[][] content;
-
-            public WarehouseMap(char[][] content, bool partTwoObjects = false)
+            foreach (char move in moves)
             {
-                this.content = content.Select(line => line.ToArray()).ToArray();
-                this.robotPosition = Coords.FirstOrDefault(coord => CharAt(coord) == '@');
-                this.partTwoObjects = partTwoObjects;
-            }
-
-            public Vector2i[] Coords =>
-                Enumerable.Range(0, content.Length).SelectMany(y =>
-                   Enumerable.Range(0, content[y].Length).Select(x => new Vector2i(x, y))).ToArray();
-
-            public long SumOfGPSCoordinates =>
-                partTwoObjects ? GetSumOfGPSCoordinates('[') : GetSumOfGPSCoordinates('O');
-
-            private long GetSumOfGPSCoordinates(char target)
-            {
-                return Coords.Where(coord => CharAt(coord) == target)
-                   .Select(coord => 100 * coord.y + coord.x).Sum();
-            }
-
-            public char CharAt(Vector2i position)
-            {
-                return content[position.y][position.x];
-            }
-
-            public void MoveRobot(MoveWareHouseRobot move)
-            {
-                var direction = move switch
+                RobotVector dir = move switch
                 {
-                    MoveWareHouseRobot.Up => new Vector2i(0, -1),
-                    MoveWareHouseRobot.Down => new Vector2i(0, 1),
-                    MoveWareHouseRobot.Left => new Vector2i(-1, 0),
-                    MoveWareHouseRobot.Right => new Vector2i(1, 0),
-                    _ => throw new Exception("Invalid move")
+                    '>' => RobotVector.Right,
+                    'v' => RobotVector.Down,
+                    '<' => RobotVector.Left,
+                    '^' => RobotVector.Up,
+                    _ => throw new Exception("Invalid direction")
                 };
-
-                if (partTwoObjects)
-                    MoveRobotpartTwoObjects(direction);
+                
+                HashSet<Obstacle> GetBoxesToPush(RobotVector pos)
+                {
+                    if (map.TryGetValue(pos, out var obstacle))
+                    {
+                        HashSet<Obstacle> results = [obstacle];
+                        if (obstacle.Tile == 'O')
+                        {
+                            if (dir == RobotVector.Left)
+                            {
+                                results.UnionWith(GetBoxesToPush(obstacle.Left + RobotVector.Left));
+                            }
+                            else if (dir == RobotVector.Right)
+                            {
+                                results.UnionWith(GetBoxesToPush(obstacle.Right + RobotVector.Right));
+                            }
+                            else
+                            {
+                                results.UnionWith(GetBoxesToPush(obstacle.Left + dir));
+                                results.UnionWith(GetBoxesToPush(obstacle.Right + dir));
+                            }
+                        }
+                        return results;
+                    }
+                    else
+                    {
+                        return new HashSet<Obstacle>();
+                    }
+                }
+                HashSet<Obstacle> thingsToPush = GetBoxesToPush(robotPos + dir);
+                if (thingsToPush.Count == 0)
+                {
+                    robotPos += dir;
+                }
+                else if (thingsToPush.Any(obstacle => obstacle.Tile == '#'))
+                {
+                    continue;
+                }
                 else
-                    MoveRobotSmallObjects(direction);
-            }
-
-            private void MoveRobotSmallObjects(Vector2i direction)
-            {
-                var potentialBoxLocations = new List<Vector2i>();
-
-                var seekerPos = robotPosition + direction;
-                while (CharAt(seekerPos) != '#')
                 {
-                    potentialBoxLocations.Add(seekerPos);
-                    seekerPos += direction;
-                }
-
-                if (potentialBoxLocations.Count() == 0) return;
-
-                if (potentialBoxLocations.All(coord => CharAt(coord) == 'O')) return;
-
-                var boxesToMove = potentialBoxLocations.TakeWhile(coord => CharAt(coord) == 'O').ToArray();
-
-                for (int i = 0; i < boxesToMove.Length; i++)
-                {
-                    var box = boxesToMove[i];
-                    if (i == 0)
+                    foreach (var obstacle in thingsToPush)
                     {
-                        content[box.y][box.x] = '.';
+                        map.Remove(obstacle.Left);
+                        map.Remove(obstacle.Right);
                     }
-                    content[box.y + direction.y][box.x + direction.x] = 'O';
-                }
-
-                content[robotPosition.y][robotPosition.x] = '.';
-                var newRobotPosition = robotPosition + direction;
-                content[newRobotPosition.y][newRobotPosition.x] = '@';
-                robotPosition = newRobotPosition;
-            }
-
-            private void MoveRobotpartTwoObjects(Vector2i direction)
-            {
-                if (Math.Abs(direction.x) == 1)
-                    MoveRobotpartTwoObjectsHorizontal(direction);
-                else
-                    MoveRobotpartTwoObjectsVertical(direction);
-            }
-
-            private void MoveRobotpartTwoObjectsHorizontal(Vector2i direction)
-            {
-                var potentialBoxLocations = new List<Vector2i>();
-
-                var seekerPos = robotPosition + direction;
-                while (CharAt(seekerPos) != '#')
-                {
-                    potentialBoxLocations.Add(seekerPos);
-                    seekerPos += direction;
-                }
-
-                if (potentialBoxLocations.Count() == 0) return;
-
-                if (potentialBoxLocations.All(coord => CharAt(coord) == '[' || CharAt(coord) == ']')) return;
-
-                var boxesToMove = potentialBoxLocations.TakeWhile(coord => CharAt(coord) == '[' || CharAt(coord) == ']').ToArray();
-
-                char prevCharA = '!'; 
-                for (int i = 0; i < boxesToMove.Length; i += 2)
-                {
-                    var coordHalfA = boxesToMove[i];
-                    var coordHalfB = boxesToMove[i + 1];
-
-                    var charHalfA = i == 0 ? CharAt(coordHalfA) : prevCharA;
-                    var charHalfB = CharAt(coordHalfB);
-
-                    if (i == 0)
+                    foreach (var obstacle in thingsToPush)
                     {
-                        content[coordHalfA.y][coordHalfA.x] = '.';
+                        Obstacle newObstacle = new(obstacle.Tile, obstacle.Left + dir, obstacle.Right + dir);
+                        map[newObstacle.Left] = newObstacle;
+                        map[newObstacle.Right] = newObstacle;
                     }
-                    content[coordHalfB.y][coordHalfB.x] = charHalfA;
-                    prevCharA = CharAt(coordHalfA + direction);
-                    content[coordHalfB.y][coordHalfB.x + direction.x] = charHalfB;
-                }
-
-                content[robotPosition.y][robotPosition.x] = '.';
-                var newRobotPosition = robotPosition + direction;
-                content[newRobotPosition.y][newRobotPosition.x] = '@';
-                robotPosition = newRobotPosition;
-            }
-
-            private void MoveRobotpartTwoObjectsVertical(Vector2i direction)
-            {
-                var potentialBoxLocations = new List<Vector2i>();
-
-                var seekerPos = robotPosition + direction;
-                while (CharAt(seekerPos) != '#')
-                {
-                    potentialBoxLocations.Add(seekerPos);
-                    seekerPos += direction;
-                }
-
-                if (potentialBoxLocations.Count() == 0) return;
-
-                if (potentialBoxLocations.All(coord => CharAt(coord) == '[' || CharAt(coord) == ']')) return;
-
-                var (boxesToMove, canMove) = FindBoxesToMoveVertical(direction);
-
-                if (!canMove) return;
-
-                MoveBoxesInVerticalDirection(boxesToMove, direction);
-
-                content[robotPosition.y][robotPosition.x] = '.';
-                var newRobotPosition = robotPosition + direction;
-                content[newRobotPosition.y][newRobotPosition.x] = '@';
-                robotPosition = newRobotPosition;
-            }
-
-            private void MoveBoxesInVerticalDirection(List<(Vector2i left, Vector2i right)> boxesToMove, Vector2i direction)
-            {
-                var oldLocationCharacterMap = new Dictionary<Vector2i, char>();
-                foreach (var box in boxesToMove)
-                {
-                    oldLocationCharacterMap[box.left] = CharAt(box.left);
-                    oldLocationCharacterMap[box.right] = CharAt(box.right);
-                }
-
-                var newCoords = new HashSet<Vector2i>();
-                foreach (var box in boxesToMove)
-                {
-                    var newCoordLeft = box.left + direction;
-                    var newCoordRight = box.right + direction;
-
-                    if (!newCoords.Contains(box.left))
-                        content[box.left.y][box.left.x] = '.';
-                    if (!newCoords.Contains(box.right))
-                        content[box.right.y][box.right.x] = '.';
-
-                    content[newCoordLeft.y][newCoordLeft.x] = oldLocationCharacterMap[box.left];
-                    content[newCoordRight.y][newCoordRight.x] = oldLocationCharacterMap[box.right];
-                    newCoords.Add(newCoordLeft);
-                    newCoords.Add(newCoordRight);
+                    robotPos += dir;
                 }
             }
 
-            private (List<(Vector2i left, Vector2i right)> boxesToMove, bool canMove) FindBoxesToMoveVertical(Vector2i direction)
+            HashSet<RobotVector> coordinates = new();
+            foreach (var kvp in map)
             {
-                var seekerPos = robotPosition + direction;
-                var nextCharInDirection = CharAt(seekerPos);
-
-                var currentBoxRow = new List<(Vector2i left, Vector2i right)>();
-                if (nextCharInDirection == '[')
+                if (kvp.Value.Tile == 'O')
                 {
-                    currentBoxRow.Add((left: seekerPos, right: seekerPos + new Vector2i(1, 0)));
+                    coordinates.Add(kvp.Value.Left);
                 }
-                else if (nextCharInDirection == ']')
-                {
-                    currentBoxRow.Add((left: seekerPos + new Vector2i(-1, 0), right: seekerPos));
-                }
+            }
+            var total = coordinates.Sum(c => 100L * c.Row + c.Col);
+            return total;
+        }
 
-                var boxesConsidered = new List<(Vector2i left, Vector2i right)>();
-                boxesConsidered.AddRange(currentBoxRow);
+        record class Obstacle(char Tile, RobotVector Left, RobotVector Right);
 
-                while (currentBoxRow.Count() > 0 && currentBoxRow.Any(box =>
-                {
-                    var nextPosLeft = box.left + direction;
-                    var nextPosRight = box.right + direction;
-                    return CharAt(nextPosLeft) == '[' || CharAt(nextPosLeft) == ']'
-                    || CharAt(nextPosRight) == '[' || CharAt(nextPosRight) == ']';
-                }))
-                {
-                    var nextBoxRow = new List<(Vector2i left, Vector2i right)>();
+        public readonly record struct RobotVector(int Row, int Col)
+        {
+            public static readonly RobotVector Zero = new RobotVector(0, 0);
+            public static readonly RobotVector Up = new RobotVector(-1, 0);
+            public static readonly RobotVector Down = new RobotVector(+1, 0);
+            public static readonly RobotVector Left = new RobotVector(0, -1);
+            public static readonly RobotVector Right = new RobotVector(0, +1);
 
-                    foreach (var box in currentBoxRow)
-                    {
-                        var nextPosLeft = box.left + direction;
-                        var nextPosRight = box.right + direction;
-
-                        if (CharAt(nextPosLeft) == '[')
-                        {
-                            nextBoxRow.Add((left: nextPosLeft, right: nextPosRight));
-                            continue;
-                        }
-                        else if (CharAt(nextPosLeft) == ']')
-                        {
-                            nextBoxRow.Add((left: nextPosLeft + new Vector2i(-1, 0), right: nextPosLeft));
-                        }
-
-                        if (CharAt(nextPosRight) == '[')
-                        {
-                            nextBoxRow.Add((left: nextPosRight, right: nextPosRight + new Vector2i(1, 0)));
-                        }
-                    }
-                    boxesConsidered.AddRange(nextBoxRow);
-                    currentBoxRow = nextBoxRow;
-                }
-
-                bool canMove = boxesConsidered.All(box =>
-                {
-                    var nextPosLeft = box.left + direction;
-                    var nextPosRight = box.right + direction;
-                    return CharAt(nextPosLeft) != '#' && CharAt(nextPosRight) != '#';
-                });
-                return (boxesConsidered, canMove);
+            public static RobotVector operator +(RobotVector left, RobotVector right)
+            {
+                return new RobotVector(left.Row + right.Row, left.Col + right.Col);
+            }
+            public static RobotVector operator -(RobotVector left, RobotVector right)
+            {
+                return new RobotVector(left.Row - right.Row, left.Col - right.Col);
+            }
+            public static RobotVector operator -(RobotVector vec)
+            {
+                return new RobotVector(-vec.Row, -vec.Col);
             }
 
-            public record struct Vector2i(int x, int y)
+            public readonly RobotVector Scale(int factor)
             {
-                public static Vector2i operator +(Vector2i a, Vector2i b) => new Vector2i(a.x + b.x, a.y + b.y);
-                public override string ToString() => $"({x}, {y})";
+                return new RobotVector(Row * factor, Col * factor);
             }
         }
+
         #endregion
     }
 }

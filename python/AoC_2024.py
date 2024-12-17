@@ -1,10 +1,11 @@
 import re
 import math
 from typing import List, Dict, Optional, Tuple
+from enum import Enum
 
 def main():
     # Day 1
-    print(day14a(), day14b())
+    print(day15a(), day15b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1110,6 +1111,125 @@ def has_consecutive_sequence(sequence: List[int], required_length: int) -> bool:
             return True
 
     return False
+# endregion
+
+# region Day15
+def day15a():
+    file = readDayFile(15)
+    sections = "".join(file).split("\n\n")
+    input_map = sections[0].splitlines()
+    moves = [c for c in sections[1] if not c.isspace()]
+
+    map = {}
+    robot_pos = RobotVector.Zero
+
+    for row, line in enumerate(input_map):
+        for col, tile in enumerate(line):
+            pos = (row, col)
+            if tile in "#O":
+                map[pos] = tile
+            elif tile == "@":
+                robot_pos = pos
+
+    for move in moves:
+        dir = {">": RobotVector.Right, "v": RobotVector.Down, "<": RobotVector.Left, "^": RobotVector.Up}[move]
+        things_to_push = []
+        next_pos = add_vectors(robot_pos, dir)
+
+        while next_pos in map:
+            tile = map[next_pos]
+            things_to_push.append(tile)
+            if tile == "#":
+                break
+            next_pos = add_vectors(next_pos, dir)
+
+        if not things_to_push:
+            robot_pos = add_vectors(robot_pos, dir)
+        elif things_to_push[-1] == "O":
+            for i in range(len(things_to_push)):
+                map.pop(add_vectors(robot_pos, scale_vector(dir, 1 + i)), None)
+            for i, tile in enumerate(things_to_push):
+                map[add_vectors(robot_pos, scale_vector(dir, 2 + i))] = tile
+            robot_pos = add_vectors(robot_pos, dir)
+
+    total = sum(100 * pos[0] + pos[1] for pos, tile in map.items() if tile == "O")
+    return total
+
+def get_boxes_to_push(map, pos, dir):
+    if pos in map:
+        obstacle = map[pos]
+        results = {obstacle}
+        if obstacle.tile == "O":
+            if dir == RobotVector.Left:
+                results.update(get_boxes_to_push(map, add_vectors(obstacle.left, RobotVector.Left), dir))
+            elif dir == RobotVector.Right:
+                results.update(get_boxes_to_push(map, add_vectors(obstacle.right, RobotVector.Right), dir))
+            else:
+                results.update(get_boxes_to_push(map, add_vectors(obstacle.left, dir), dir))
+                results.update(get_boxes_to_push(map, add_vectors(obstacle.right, dir), dir))
+        return results
+    return set()
+
+def day15b():
+    file = readDayFile(15)
+    sections = "".join(file).split("\n\n")
+    input_map = sections[0].splitlines()
+    moves = [c for c in sections[1] if not c.isspace()]
+
+    map = {}
+    robot_pos = RobotVector.Zero
+
+    for row, line in enumerate(input_map):
+        for col, tile in enumerate(line):
+            pos = (row, col * 2)
+            if tile in "#O":
+                right = add_vectors(pos, RobotVector.Right)
+                obstacle = Obstacle(tile, pos, right)
+                map[pos] = obstacle
+                map[right] = obstacle
+            elif tile == "@":
+                robot_pos = pos
+
+    for move in moves:
+        dir = {">": RobotVector.Right, "v": RobotVector.Down, "<": RobotVector.Left, "^": RobotVector.Up}[move]
+        things_to_push = get_boxes_to_push(map, add_vectors(robot_pos, dir), dir)
+
+        if not things_to_push:
+            robot_pos = add_vectors(robot_pos, dir)
+        elif any(obstacle.tile == "#" for obstacle in things_to_push):
+            continue
+        else:
+            for obstacle in things_to_push:
+                del map[obstacle.left]
+                del map[obstacle.right]
+            for obstacle in things_to_push:
+                new_obstacle = Obstacle(obstacle.tile, add_vectors(obstacle.left, dir), add_vectors(obstacle.right, dir))
+                map[new_obstacle.left] = new_obstacle
+                map[new_obstacle.right] = new_obstacle
+            robot_pos = add_vectors(robot_pos, dir)
+
+    coordinates = {obstacle.left for obstacle in map.values() if obstacle.tile == "O"}
+    return sum(100 * coord[0] + coord[1] for coord in coordinates)
+
+class Obstacle:
+    def __init__(self, tile, left, right):
+        self.tile = tile
+        self.left = left
+        self.right = right
+
+class RobotVector:
+    Zero = (0, 0)
+    Up = (-1, 0)
+    Down = (1, 0)
+    Left = (0, -1)
+    Right = (0, 1)
+
+def add_vectors(a, b):
+    return (a[0] + b[0], a[1] + b[1])
+
+def scale_vector(vec, factor):
+    return (vec[0] * factor, vec[1] * factor)
+
 # endregion
 
 if __name__ == "__main__":

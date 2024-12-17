@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day14a(), day14b());
+    console.log(day15a(), day15b());
 }
 
 function readDayFile(day){
@@ -1367,6 +1367,170 @@ function hasConsecutiveSequence(sequence, requiredLength) {
     }
 
     return false;
+}
+// #endregion
+
+// #region Day15
+function day15a() {
+    const file = readDayFile(15);
+    const { inputMap, moves } = parseInput(file);
+    const map = new Map();
+    let robotPos = RobotVector.Zero;
+
+    inputMap.forEach((line, row) => {
+        for (let col = 0; col < line.length; col++) {
+            const tile = line[col];
+            const pos = new RobotVector(row, col);
+            if (tile === "#" || tile === "O") map.set(`${pos.row},${pos.col}`, tile);
+            else if (tile === "@") robotPos = pos;
+        }
+    });
+
+    for (const move of moves) {
+        const dir = { ">": RobotVector.Right, "v": RobotVector.Down, "<": RobotVector.Left, "^": RobotVector.Up }[move];
+        const thingsToPush = [];
+        let next = robotPos.add(dir);
+
+        while (true) {
+            const tile = map.get(`${next.row},${next.col}`);
+            if (tile) {
+                thingsToPush.push(tile);
+                if (tile === "#") break;
+                next = next.add(dir);
+            } else break;
+        }
+
+        if (thingsToPush.length === 0) {
+            robotPos = robotPos.add(dir);
+        } else if (thingsToPush[thingsToPush.length - 1] === "O") {
+            for (let i = 0; i < thingsToPush.length; i++) {
+                const pos = robotPos.add(dir.scale(1 + i));
+                map.delete(`${pos.row},${pos.col}`);
+            }
+            for (let i = 0; i < thingsToPush.length; i++) {
+                const pos = robotPos.add(dir.scale(2 + i));
+                map.set(`${pos.row},${pos.col}`, thingsToPush[i]);
+            }
+            robotPos = robotPos.add(dir);
+        }
+    }
+
+    let total = 0;
+    for (const [key, value] of map) {
+        if (value === "O") {
+            const [row, col] = key.split(",").map(Number);
+            total += 100 * row + col;
+        }
+    }
+    return total;
+}
+
+function day15b() {
+    const file = readDayFile(15);
+    const { inputMap, moves } = parseInput(file);
+    const map = new Map();
+    let robotPos = RobotVector.Zero;
+
+    inputMap.forEach((line, row) => {
+        for (let col = 0; col < line.length; col++) {
+            const tile = line[col];
+            const pos = new RobotVector(row, col * 2);
+            if (tile === "#" || tile === "O") {
+                const right = pos.add(RobotVector.Right);
+                const obstacle = new Obstacle(tile, pos, right);
+                map.set(`${pos.row},${pos.col}`, obstacle);
+                map.set(`${right.row},${right.col}`, obstacle);
+            } else if (tile === "@") {
+                robotPos = pos;
+            }
+        }
+    });
+
+    function getBoxesToPush(pos, dir) {
+        const results = new Set();
+        const obstacle = map.get(`${pos.row},${pos.col}`);
+        if (obstacle) {
+            results.add(obstacle);
+            if (obstacle.tile === "O") {
+                if (dir === RobotVector.Left) {
+                    getBoxesToPush(obstacle.left.add(RobotVector.Left), dir).forEach(o => results.add(o));
+                } else if (dir === RobotVector.Right) {
+                    getBoxesToPush(obstacle.right.add(RobotVector.Right), dir).forEach(o => results.add(o));
+                } else {
+                    getBoxesToPush(obstacle.left.add(dir), dir).forEach(o => results.add(o));
+                    getBoxesToPush(obstacle.right.add(dir), dir).forEach(o => results.add(o));
+                }
+            }
+        }
+        return results;
+    }
+
+    for (const move of moves) {
+        const dir = { ">": RobotVector.Right, "v": RobotVector.Down, "<": RobotVector.Left, "^": RobotVector.Up }[move];
+        const thingsToPush = getBoxesToPush(robotPos.add(dir), dir);
+
+        if (thingsToPush.size === 0) {
+            robotPos = robotPos.add(dir);
+        } else if ([...thingsToPush].some(obstacle => obstacle.tile === "#")) {
+            continue;
+        } else {
+            for (const obstacle of thingsToPush) {
+                map.delete(`${obstacle.left.row},${obstacle.left.col}`);
+                map.delete(`${obstacle.right.row},${obstacle.right.col}`);
+            }
+            for (const obstacle of thingsToPush) {
+                const newObstacle = new Obstacle(obstacle.tile, obstacle.left.add(dir), obstacle.right.add(dir));
+                map.set(`${newObstacle.left.row},${newObstacle.left.col}`, newObstacle);
+                map.set(`${newObstacle.right.row},${newObstacle.right.col}`, newObstacle);
+            }
+            robotPos = robotPos.add(dir);
+        }
+    }
+
+    const coordinates = new Set();
+    for (const [key, obstacle] of map.entries()) {
+        if (obstacle.tile === "O") {
+            coordinates.add(obstacle.left);
+        }
+    }
+
+    return [...coordinates].reduce((total, coord) => total + 100 * coord.row + coord.col, 0);
+}
+
+class Obstacle {
+    constructor(tile, left, right) {
+        this.tile = tile;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class RobotVector {
+    constructor(row, col) {
+        this.row = row;
+        this.col = col;
+    }
+
+    static Zero = new RobotVector(0, 0);
+    static Up = new RobotVector(-1, 0);
+    static Down = new RobotVector(1, 0);
+    static Left = new RobotVector(0, -1);
+    static Right = new RobotVector(0, 1);
+
+    add(vector) {
+        return new RobotVector(this.row + vector.row, this.col + vector.col);
+    }
+
+    scale(factor) {
+        return new RobotVector(this.row * factor, this.col * factor);
+    }
+}
+
+function parseInput(file) {
+    const sections = file.split("\n\n");
+    const inputMap = sections[0].split("\n");
+    const moves = sections[1].replace(/\s/g, "").split("");
+    return { inputMap, moves };
 }
 // #endregion
 
