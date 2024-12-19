@@ -2,10 +2,12 @@ import re
 import math
 from typing import List, Dict, Optional, Tuple
 from enum import Enum
+import heapq
+from collections import defaultdict
 
 def main():
     # Day 1
-    print(day15a(), day15b())
+    print(day16a(), day16b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1230,6 +1232,205 @@ def add_vectors(a, b):
 def scale_vector(vec, factor):
     return (vec[0] * factor, vec[1] * factor)
 
+# endregion
+
+# region Day16
+def day16a():
+    file = readDayFile(16)
+    start = State(
+        Position(len(file) - 2, 1), 
+        Direction.East
+    )
+
+    if file[start.pos.row][start.pos.col] != 'S':
+        start = State(
+            Position(1, len(file[0]) - 2), 
+            Direction.South
+        )
+
+    solver = solve(file, start)
+    return solver.cheapest
+
+
+def day16b():
+    file = readDayFile(16)
+    start = State(
+        Position(len(file) - 2, 1), 
+        Direction.East
+    )
+
+    if file[start.pos.row][start.pos.col] != 'S':
+        start = State(
+            Position(1, len(file[0]) - 2), 
+            Direction.South
+        )
+
+    solver = solve(file, start)
+
+    seen = set()
+    queue = [solver.end]
+    zero = None
+
+    while queue:
+        v = queue.pop(0)
+        if v != zero:
+            seen.add(v.pos)
+            for parent in solver.prov[v].parents:
+                queue.append(parent)
+
+    return len(seen)
+
+class Direction:
+    East = None
+    South = None
+    West = None
+    North = None
+
+    def __init__(self, row: int, col: int):
+        self.row = row
+        self.col = col
+
+    def turn_right(self):
+        if self == Direction.East:
+            return Direction.South
+        if self == Direction.South:
+            return Direction.West
+        if self == Direction.West:
+            return Direction.North
+        return Direction.East
+
+    def turn_left(self):
+        if self == Direction.East:
+            return Direction.North
+        if self == Direction.North:
+            return Direction.West
+        if self == Direction.West:
+            return Direction.South
+        return Direction.East
+
+Direction.East = Direction(0, 1)
+Direction.South = Direction(1, 0)
+Direction.West = Direction(0, -1)
+Direction.North = Direction(-1, 0)
+
+class Position:
+    def __init__(self, row: int, col: int):
+        self.row = row
+        self.col = col
+
+    def move(self, direction: Direction):
+        return Position(self.row + direction.row, self.col + direction.col)
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        return self.row == other.row and self.col == other.col
+
+    def __hash__(self):
+        return hash((self.row, self.col))
+
+class State:
+    def __init__(self, pos: Position, direction: Direction):
+        self.pos = pos
+        self.dir = direction
+
+    def possible(self):
+        return {
+            'straight': State(self.pos.move(self.dir), self.dir),
+            'left': State(self.pos, self.dir.turn_left()),
+            'right': State(self.pos, self.dir.turn_right())
+        }
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        return self.pos == other.pos and self.dir == other.dir
+
+    def __hash__(self):
+        return hash((self.pos, self.dir))
+
+class Provenance:
+    def __init__(self, cost: int):
+        self.cost = cost
+        self.parents: List[State] = []
+
+    def maybe_add(self, parent: Optional[State], cost: int):
+        if self.cost > cost:
+            self.cost = cost
+            self.parents = [parent] if parent else []
+        elif self.cost == cost and parent:
+            self.parents.append(parent)
+
+class Solver:
+    def __init__(self, grid: List[str]):
+        self.grid = grid
+        self.pq: Dict[int, List[State]] = {}
+        self.prov: Dict[State, Provenance] = {}
+        self.visited: Dict[State, int] = {}
+        self.cheapest = 0
+        self.highest = 0
+        self.end = None
+
+    def add(self, v: State, prev: Optional[State], cost: int):
+        if v not in self.prov:
+            self.prov[v] = Provenance(cost)
+        
+        self.prov[v].maybe_add(prev, cost)
+
+        existing_cost = self.visited.get(v)
+        if existing_cost is None or cost < existing_cost:
+            self.visited[v] = cost
+            
+            if cost not in self.pq:
+                self.pq[cost] = []
+            
+            self.pq[cost].append(v)
+            self.highest = max(self.highest, cost)
+
+    def pop(self, cost: int):
+        v = self.pq[cost][0]
+        self.pq[cost].pop(0)
+        return v
+
+    def lookup(self, p: Position):
+        return self.grid[p.row][p.col]
+
+    def is_end(self, p: Position):
+        return self.lookup(p) == 'E'
+
+    def is_open(self, p: Position):
+        return self.lookup(p) != '#'
+
+def solve(grid: List[str], start: State) -> Solver:
+    solver = Solver(grid)
+    solver.add(start, None, 0)
+
+    while True:
+        while (solver.cheapest not in solver.pq or 
+               len(solver.pq[solver.cheapest]) == 0):
+            if solver.cheapest > solver.highest:
+                raise Exception("Ran out of priority queue")
+            solver.cheapest += 1
+
+        v = solver.pop(solver.cheapest)
+
+        if solver.is_end(v.pos):
+            solver.end = v
+            return solver
+
+        possible = v.possible()
+        straight, left, right = (
+            possible['straight'], 
+            possible['left'], 
+            possible['right']
+        )
+
+        if solver.is_open(straight.pos):
+            solver.add(straight, v, solver.cheapest + 1)
+        if solver.is_open(left.pos):
+            solver.add(left, v, solver.cheapest + 1000)
+        if solver.is_open(right.pos):
+            solver.add(right, v, solver.cheapest + 1000)
 # endregion
 
 if __name__ == "__main__":
