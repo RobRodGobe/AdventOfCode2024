@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day17a());
+            Console.WriteLine(Day18a());
             /* Part b */
-            Console.WriteLine(Day17b());
+            Console.WriteLine(Day18b());
         }
 
         static string[] ReadDayFile(int day)
@@ -2330,5 +2330,134 @@ namespace AoC_2024
         }
 
         #endregion    
+    
+        #region Day18
+        static int Day18a()
+        {
+            string[] file = ReadDayFile(18);
+
+            var coordinates = AllBlockedCoords(file);
+            var start = new Coord(0, 0);
+            var end = new Coord(70, 70);
+
+            var (shortestPath, _) = ShortestPath(coordinates.Take(1024).ToList(), start, end);
+
+            return shortestPath;
+        }
+
+        static string Day18b()
+        {
+            string[] file = ReadDayFile(18);
+
+            var coordinates = AllBlockedCoords(file);
+            var start = new Coord(0, 0);
+            var end = new Coord(70, 70);
+
+            var block = SearchForBlockage(coordinates, start, end);
+
+            return $"{block.X}, {block.Y}";
+        }
+
+        struct Coord
+        {
+            public int X, Y;
+
+            public Coord(int x, int y)
+            {
+                X = x;
+                Y = y;
+            }
+
+            public bool IsValidStep(HashSet<Coord> blocked)
+            {
+                return !blocked.Contains(this) && X >= 0 && Y >= 0 && X <= 70 && Y <= 70;
+            }
+
+            public IEnumerable<Coord> NextCoords()
+            {
+                return new List<Coord>
+                {
+                    new Coord(X + 1, Y),
+                    new Coord(X - 1, Y),
+                    new Coord(X, Y + 1),
+                    new Coord(X, Y - 1)
+                };
+            }
+        }
+
+        static HashSet<Coord> BlockedCoords(IEnumerable<Coord> coords)
+        {
+            return new HashSet<Coord>(coords);
+        }
+
+        static List<Coord> AllBlockedCoords(string[] lines)
+        {
+            var allCoords = new List<Coord>();
+
+            foreach (var line in lines)
+            {
+                var parts = line.Split(',');
+                if (int.TryParse(parts[0], out int x) && int.TryParse(parts[1], out int y))
+                {
+                    allCoords.Add(new Coord(x, y));
+                }
+                else
+                {
+                    throw new Exception("Couldn't parse int.");
+                }
+            }
+
+            return allCoords;
+        }
+
+        static (int, bool) ShortestPath(List<Coord> coords, Coord start, Coord end)
+        {
+            var blocked = BlockedCoords(coords);
+            var visited = new Dictionary<Coord, int> { [start] = 0 };
+            var queue = new Queue<Coord>();
+            queue.Enqueue(start);
+
+            while (queue.Count > 0)
+            {
+                var node = queue.Dequeue();
+
+                foreach (var c in node.NextCoords())
+                {
+                    if (c.IsValidStep(blocked) && !visited.ContainsKey(c))
+                    {
+                        queue.Enqueue(c);
+                        visited[c] = visited[node] + 1;
+                    }
+                }
+            }
+
+            return visited.TryGetValue(end, out int distance) ? (distance, true) : (0, false);
+        }
+
+        static Coord SearchForBlockage(List<Coord> allCoords, Coord start, Coord end)
+        {
+            int l = 1024;
+            int r = allCoords.Count - 1;
+            int m = (l + r) / 2;
+
+            while (l != m && r != m)
+            {
+                var (_, ok) = ShortestPath(allCoords.Take(m).ToList(), start, end);
+
+                if (ok)
+                {
+                    l = m;
+                    m = (m + r) / 2;
+                }
+                else
+                {
+                    r = m;
+                    m = (l + m) / 2;
+                }
+            }
+
+            return allCoords[m];
+        }
+        #endregion
     }
 }

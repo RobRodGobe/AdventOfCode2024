@@ -15,8 +15,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day17a())
-	fmt.Println(day17b())
+	fmt.Println(day18a())
+	fmt.Println(day18b())
 }
 
 // region Day1
@@ -2083,7 +2083,7 @@ func day17a() string {
 	comp := initComputer(file)
 	out := Run(comp.A, comp.B, comp.C, comp.Program)
 	for i, num := range out {
-		if (i > 0) {
+		if i > 0 {
 			res += ","
 		}
 
@@ -2171,10 +2171,10 @@ func Run(a, b, c uint64, program []uint64) []uint64 {
 	var instruction uint64
 	var param uint64
 	out := []uint64{}
-	
+
 	for pointer := uint64(0); pointer < uint64(len(program)); pointer += 2 {
 		instruction, param = program[pointer], program[pointer+1]
-		
+
 		combo := param
 		switch param {
 		case 4:
@@ -2203,7 +2203,7 @@ func Run(a, b, c uint64, program []uint64) []uint64 {
 			b = a >> combo
 		case 7:
 			c = a >> combo
-		}		
+		}
 	}
 	return out
 }
@@ -2219,6 +2219,113 @@ func matchesProgram(output []uint64, expected []uint64) bool {
 	}
 	return true
 }
+
+// endregion
+
+// region Day18
+func day18a() int {
+	file := readDayFile(18)
+
+	coordinates := AllBlockedCoords(file)
+	start := Coord{0, 0}
+	end := Coord{70, 70}
+
+	shortestPath, _ := ShortestPath(coordinates[:1024], start, end)
+
+	return shortestPath
+}
+
+func day18b() string {
+	file := readDayFile(18)
+
+	coordinates := AllBlockedCoords(file)
+	start := Coord{0, 0}
+	end := Coord{70, 70}
+
+	block := SearchForBlockage(coordinates, start, end)
+
+	return fmt.Sprintf("%d, %d", block.X, block.Y)
+}
+
+type Coord struct {
+	X, Y int
+}
+
+type BlockedCoords map[Coord]struct{}
+
+func blockedCoords(coords []Coord) BlockedCoords {
+	bc := make(BlockedCoords)
+	for _, c := range coords {
+		bc[c] = struct{}{}
+	}
+	return bc
+}
+
+func AllBlockedCoords(s string) []Coord {
+	coordStrs := strings.Split(s, "\n")
+	allC := make([]Coord, len(coordStrs))
+
+	for i, c := range coordStrs {
+		parts := strings.Split(c, ",")
+		x, errX := strconv.ParseInt(parts[0], 10, 0)
+		y, errY := strconv.ParseInt(parts[1], 10, 0)
+		if errX != nil || errY != nil {
+			log.Fatal("Couldn't parse int.")
+		}
+		allC[i] = Coord{int(x), int(y)}
+	}
+
+	return allC
+}
+
+func (c Coord) isValidStep(b BlockedCoords) bool {
+	_, blocked := b[c]
+	return !(blocked || c.X < 0 || c.Y < 0 || c.X > 70 || c.Y > 70)
+}
+
+func (c Coord) nextCoords() []Coord {
+	return []Coord{Coord{c.X + 1, c.Y}, Coord{c.X - 1, c.Y}, Coord{c.X, c.Y + 1}, Coord{c.X, c.Y - 1}}
+}
+
+func ShortestPath(coords []Coord, start, end Coord) (int, bool) {
+	b := blockedCoords(coords)
+	visited := map[Coord]int{start: 0}
+	q := []Coord{start}
+	var node Coord
+
+	for len(q) > 0 {
+		node, q = q[0], q[1:]
+
+		for _, c := range node.nextCoords() {
+			_, alreadyReached := visited[c]
+			if c.isValidStep(b) && !alreadyReached {
+				q = append(q, c)
+				visited[c] = visited[node] + 1
+			}
+		}
+	}
+
+	distance, validPath := visited[end]
+	return distance, validPath
+}
+
+func SearchForBlockage(allC []Coord, start, end Coord) Coord {
+	l := 1024
+	r := len(allC) - 1
+	m := (l + r) / 2
+
+	for l != m && r != m {
+		_, ok := ShortestPath(allC[:m], start, end)
+
+		if ok {
+			l, r, m = m, r, (m+r)/2
+		} else {
+			l, r, m = l, m, (l+m)/2
+		}
+	}
+	return allC[m]
+}
+
 // endregion
 
 func readDayFile(day int32) string {

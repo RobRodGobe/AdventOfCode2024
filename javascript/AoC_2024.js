@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day17a(), day17b());
+    console.log(day18a(), day18b());
 }
 
 function readDayFile(day){
@@ -1904,6 +1904,124 @@ function matchesProgram(output, expected) {
     }
 
     return true;
+}
+// #endregion
+
+// #region Day18
+function day18a() {
+    const file = readDayFile(18);
+
+    const coordinates = allBlockedCoords(file);
+    const start = new Coord(0, 0);
+    const end = new Coord(70, 70);
+
+    const shortest_Path = shortestPath(coordinates.slice(0, 1024), start, end);
+
+    return shortest_Path[0];
+}
+
+function day18b() {
+    const file = readDayFile(18);
+
+    const coordinates = allBlockedCoords(file);
+    const start = new Coord(0, 0);
+    const end = new Coord(70, 70);
+
+    const block = searchForBlockage(coordinates, start, end);
+
+    return `${block.x}, ${block.y}`;
+}
+
+class Coord {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    isValidStep(blocked) {
+        return (
+            !blocked.has(this.toString()) &&
+            this.x >= 0 &&
+            this.y >= 0 &&
+            this.x <= 70 &&
+            this.y <= 70
+        );
+    }
+
+    nextCoords() {
+        return [
+            new Coord(this.x + 1, this.y),
+            new Coord(this.x - 1, this.y),
+            new Coord(this.x, this.y + 1),
+            new Coord(this.x, this.y - 1),
+        ];
+    }
+
+    toString() {
+        return `${this.x},${this.y}`;
+    }
+}
+
+function blockedCoords(coords) {
+    const blocked = new Set();
+    coords.forEach((coord) => blocked.add(coord.toString()));
+    return blocked;
+}
+
+function allBlockedCoords(input) {
+    const lines = input.split('\n').filter((line) => line.trim() !== '');
+    return lines.map((line) => {
+        const [x, y] = line.split(',').map(Number);
+        if (isNaN(x) || isNaN(y)) {
+            throw new Error("Couldn't parse int.");
+        }
+        return new Coord(x, y);
+    });
+}
+
+function shortestPath(coords, start, end) {
+    const blocked = blockedCoords(coords);
+    const visited = new Map();
+    visited.set(start.toString(), 0);
+    const queue = [start];
+
+    while (queue.length > 0) {
+        const node = queue.shift();
+
+        for (const c of node.nextCoords()) {
+            if (
+                c.isValidStep(blocked) &&
+                !visited.has(c.toString())
+            ) {
+                queue.push(c);
+                visited.set(c.toString(), visited.get(node.toString()) + 1);
+            }
+        }
+    }
+
+    return visited.has(end.toString())
+        ? [visited.get(end.toString()), true]
+        : [0, false];
+}
+
+function searchForBlockage(allCoords, start, end) {
+    let l = 1024;
+    let r = allCoords.length - 1;
+    let m = Math.floor((l + r) / 2);
+
+    while (l !== m && r !== m) {
+        const [, ok] = shortestPath(allCoords.slice(0, m), start, end);
+
+        if (ok) {
+            l = m;
+            m = Math.floor((m + r) / 2);
+        } else {
+            r = m;
+            m = Math.floor((l + m) / 2);
+        }
+    }
+
+    return allCoords[m];
 }
 // #endregion
 

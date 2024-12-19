@@ -7,7 +7,7 @@ from collections import defaultdict
 
 def main():
     # Day 1
-    print(day17a(), day17b())
+    print(day18a(), day18b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1546,6 +1546,95 @@ def run(a: int, b: int, c: int, program: List[int]) -> List[int]:
 
 def matches_program(output: List[int], expected: List[int]) -> bool:
     return output == expected
+# endregion
+
+# region Day18
+def day18a():
+    file = readDayFile(18)
+
+    coordinates = AllBlockedCoords(file)
+    start = Coord(0, 0)
+    end = Coord(70, 70)
+
+    shortestPath, _ = ShortestPath(coordinates[:1024], start, end)
+
+    return shortestPath
+
+def day18b():
+    file = readDayFile(18)
+
+    coordinates = AllBlockedCoords(file)
+    start = Coord(0, 0)
+    end = Coord(70, 70)
+
+    block = SearchForBlockage(coordinates, start, end)
+
+    return f"{block.X}, {block.Y}"
+
+class Coord:
+    def __init__(self, x: int, y: int):
+        self.X = x
+        self.Y = y
+
+    def __hash__(self):
+        return hash((self.X, self.Y))
+
+    def __eq__(self, other):
+        return self.X == other.X and self.Y == other.Y
+
+def blockedCoords(coords: List[Coord]) -> Dict[Coord, None]:
+    return {c: None for c in coords}
+
+def AllBlockedCoords(coordStrs: List[str]) -> List[Coord]:
+    allC = []
+
+    for c in coordStrs:
+        parts = c.split(",")
+        x = int(parts[0])
+        y = int(parts[1])
+        allC.append(Coord(x, y))
+
+    return allC
+
+def isValidStep(c: Coord, b: Dict[Coord, None]) -> bool:
+    return c not in b and 0 <= c.X <= 70 and 0 <= c.Y <= 70
+
+def nextCoords(c: Coord) -> List[Coord]:
+    return [
+        Coord(c.X + 1, c.Y), 
+        Coord(c.X - 1, c.Y), 
+        Coord(c.X, c.Y + 1), 
+        Coord(c.X, c.Y - 1)
+    ]
+
+def ShortestPath(coords: List[Coord], start: Coord, end: Coord) -> Tuple[int, bool]:
+    b = blockedCoords(coords)
+    visited = {start: 0}
+    q = [start]
+
+    while q:
+        node = q.pop(0)
+
+        for c in nextCoords(node):
+            if c not in visited and isValidStep(c, b):
+                q.append(c)
+                visited[c] = visited[node] + 1
+
+    return visited.get(end, 0), end in visited
+
+def SearchForBlockage(allC: List[Coord], start: Coord, end: Coord) -> Coord:
+    l, r = 1024, len(allC) - 1
+    m = (l + r) // 2
+
+    while l != m and r != m:
+        _, ok = ShortestPath(allC[:m], start, end)
+
+        if ok:
+            l, r, m = m, r, (m + r) // 2
+        else:
+            l, r, m = l, m, (l + m) // 2
+
+    return allC[m]
 # endregion
 
 if __name__ == "__main__":
