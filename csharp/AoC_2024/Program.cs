@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day16a());
+            Console.WriteLine(Day17a());
             /* Part b */
-            Console.WriteLine(Day16b());
+            Console.WriteLine(Day17b());
         }
 
         static string[] ReadDayFile(int day)
@@ -2187,5 +2187,148 @@ namespace AoC_2024
         }
         #endregion
 
+        #region Day17
+        static string Day17a()
+        {
+            string[] file = ReadDayFile(17);
+            SmallComputer comp = InitComputer(file);
+            List<ulong> output = Run(comp.A, comp.B, comp.C, comp.Program);
+
+            string result = string.Join(",", output);
+            return result;
+        }
+
+        static ulong Day17b()
+        {
+            string[] file = ReadDayFile(17);
+            SmallComputer comp = InitComputer(file);
+
+            Queue<(ulong a, int n)> queue = new Queue<(ulong, int)>();
+            queue.Enqueue((0, 1));
+
+            while (queue.Count > 0)
+            {
+                var (a, n) = queue.Dequeue();
+
+                if (n > comp.Program.Count)
+                    return a;
+
+                for (ulong i = 0; i < 8; i++)
+                {
+                    ulong a2 = (a << 3) | i;
+                    List<ulong> output = Run(a2, 0, 0, comp.Program);
+                    List<ulong> target = comp.Program.GetRange(comp.Program.Count - n, n);
+
+                    if (MatchesProgram(output, target))
+                    {
+                        queue.Enqueue((a2, n + 1));
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        class SmallComputer
+        {
+            public ulong A { get; set; }
+            public ulong B { get; set; }
+            public ulong C { get; set; }
+            public List<ulong> Program { get; set; } = new List<ulong>();
+            public List<ulong> Out { get; set; } = new List<ulong>();
+        }
+
+        static SmallComputer InitComputer(string[] puzzle)
+        {
+            SmallComputer res = new SmallComputer();
+            Regex reR = new Regex(@"Register ([A|B|C]): (\d+)");
+            Regex reP = new Regex(@"\d");
+
+            foreach (string line in puzzle)
+            {
+                if (line.Contains("Program"))
+                {
+                    MatchCollection matches = reP.Matches(line);
+                    foreach (Match match in matches)
+                    {
+                        res.Program.Add(ulong.Parse(match.Value));
+                    }
+                }
+                else if (line.Contains("Register"))
+                {
+                    Match match = reR.Match(line);
+                    int registerValue = int.Parse(match.Groups[2].Value);
+                    if (match.Groups[1].Value == "A") res.A = (ulong)registerValue;
+                    if (match.Groups[1].Value == "B") res.B = (ulong)registerValue;
+                    if (match.Groups[1].Value == "C") res.C = (ulong)registerValue;
+                }
+            }
+
+            return res;
+        }
+
+        static List<ulong> Run(ulong a, ulong b, ulong c, List<ulong> program)
+        {
+            List<ulong> output = new List<ulong>();
+            ulong instruction, param;
+
+            for (ulong pointer = 0; pointer < (ulong)program.Count; pointer += 2)
+            {
+                instruction = program[(int)pointer];
+                param = program[(int)pointer + 1];
+
+                ulong combo = param;
+                if (param == 4) combo = a;
+                else if (param == 5) combo = b;
+                else if (param == 6) combo = c;
+
+                switch (instruction)
+                {
+                    case 0:
+                        a >>= (int)combo;
+                        break;
+                    case 1:
+                        b ^= param;
+                        break;
+                    case 2:
+                        b = combo % 8;
+                        break;
+                    case 3:
+                        if (a != 0)
+                            pointer = param - 2;
+                        break;
+                    case 4:
+                        b ^= c;
+                        break;
+                    case 5:
+                        output.Add(combo % 8);
+                        break;
+                    case 6:
+                        b = a >> (int)combo;
+                        break;
+                    case 7:
+                        c = a >> (int)combo;
+                        break;
+                }
+            }
+
+            return output;
+        }
+
+        static bool MatchesProgram(List<ulong> output, List<ulong> expected)
+        {
+            if (output.Count != expected.Count)
+                return false;
+
+            for (int i = 0; i < output.Count; i++)
+            {
+                if (output[i] != expected[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        #endregion    
     }
 }

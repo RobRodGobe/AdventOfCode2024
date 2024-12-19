@@ -2,6 +2,7 @@ package main
 
 import (
 	"cmp"
+	"container/list"
 	"fmt"
 	"log"
 	"math"
@@ -14,8 +15,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day16a())
-	fmt.Println(day16b())
+	fmt.Println(day17a())
+	fmt.Println(day17b())
 }
 
 // region Day1
@@ -2071,6 +2072,152 @@ func solve(grid []string, start state) *solver {
 			s.add(right, v, s.cheapest+1000)
 		}
 	}
+}
+
+// endregion
+
+// region Day17
+func day17a() string {
+	file := strings.Split(readDayFile(17), "\n")
+	var res string
+	comp := initComputer(file)
+	out := Run(comp.A, comp.B, comp.C, comp.Program)
+	for i, num := range out {
+		if (i > 0) {
+			res += ","
+		}
+
+		res += strconv.FormatUint(num, 10)
+	}
+
+	return res
+}
+
+func day17b() uint64 {
+	file := strings.Split(readDayFile(17), "\n")
+	comp := initComputer(file)
+
+	type QueueItem struct {
+		a uint64
+		n int
+	}
+
+	queue := list.New()
+	queue.PushBack(QueueItem{a: 0, n: 1})
+
+	for queue.Len() > 0 {
+		item := queue.Remove(queue.Front()).(QueueItem)
+		a, n := item.a, item.n
+
+		if n > len(comp.Program) {
+			return a
+		}
+
+		for i := uint64(0); i < 8; i++ {
+			a2 := (a << 3) | i
+			out := Run(a2, 0, 0, comp.Program)
+			target := comp.Program[len(comp.Program)-n:]
+
+			if matchesProgram(out, target) {
+				queue.PushBack(QueueItem{a: a2, n: n + 1})
+			}
+		}
+	}
+
+	return 0
+}
+
+type SmallComputer struct {
+	A, B, C uint64
+	Program []uint64
+	Out     []uint64
+}
+
+func initComputer(puzzle []string) *SmallComputer {
+	var res = SmallComputer{
+		A:       0,
+		B:       0,
+		C:       0,
+		Program: nil,
+		Out:     nil,
+	}
+	reR := regexp.MustCompile(`Register ([A|B|C]): (\d+)`)
+	reP := regexp.MustCompile(`\d`)
+	for _, line := range puzzle {
+		if strings.Contains(line, "Program") {
+			match := reP.FindAllStringSubmatch(line, -1)
+			for m := 0; m < len(match); m++ {
+				instruction, _ := strconv.ParseUint(match[m][0], 10, 64)
+				res.Program = append(res.Program, instruction)
+
+			}
+		} else if strings.Contains(line, "Register") {
+			match := reR.FindAllStringSubmatch(line, -1)
+
+			register, _ := strconv.Atoi(match[0][2])
+			if match[0][1] == "A" {
+				res.A = uint64(register)
+			} else if match[0][1] == "B" {
+				res.B = uint64(register)
+			} else if match[0][1] == "C" {
+				res.C = uint64(register)
+			}
+		}
+	}
+	return &res
+}
+
+func Run(a, b, c uint64, program []uint64) []uint64 {
+	var instruction uint64
+	var param uint64
+	out := []uint64{}
+	
+	for pointer := uint64(0); pointer < uint64(len(program)); pointer += 2 {
+		instruction, param = program[pointer], program[pointer+1]
+		
+		combo := param
+		switch param {
+		case 4:
+			combo = a
+		case 5:
+			combo = b
+		case 6:
+			combo = c
+		}
+		switch instruction {
+		case 0:
+			a >>= combo
+		case 1:
+			b ^= param
+		case 2:
+			b = combo % 8
+		case 3:
+			if a != 0 {
+				pointer = param - 2
+			}
+		case 4:
+			b ^= c
+		case 5:
+			out = append(out, combo%8)
+		case 6:
+			b = a >> combo
+		case 7:
+			c = a >> combo
+		}		
+	}
+	return out
+}
+
+func matchesProgram(output []uint64, expected []uint64) bool {
+	if len(output) != len(expected) {
+		return false
+	}
+	for i := range output {
+		if output[i] != expected[i] {
+			return false
+		}
+	}
+	return true
 }
 // endregion
 

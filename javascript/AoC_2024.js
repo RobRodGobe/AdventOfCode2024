@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day16a(), day16b());
+    console.log(day17a(), day17b());
 }
 
 function readDayFile(day){
@@ -1771,6 +1771,139 @@ function solve(grid, start) {
             solver.add(right, v, solver.cheapest + 1000);
         }
     }
+}
+// #endregion
+
+// #region Day17
+function day17a() {
+    const file = readDayFile(17).split("\n");
+    const comp = initComputer(file);
+    const output = run(comp.A, comp.B, comp.C, comp.Program);
+
+    return output.join(",");
+}
+
+function day17b() {
+    const file = readDayFile(17).split("\n");
+    const comp = initComputer(file);
+
+    const queue = [{ a: 0n, n: 1 }];
+    while (queue.length > 0) {
+        const { a, n } = queue.shift();
+
+        if (n > comp.Program.length) {
+            return a.toString();
+        }
+
+        for (let i = 0n; i < 8n; i++) {
+            const a2 = (a << 3n) | i;
+            const output = run(a2, 0n, 0n, comp.Program);
+            const target = comp.Program.slice(-n);
+
+            if (matchesProgram(output, target)) {
+                queue.push({ a: a2, n: n + 1 });
+            }
+        }
+    }
+
+    return 0;
+}
+
+class SmallComputer {
+    constructor() {
+        this.A = 0;
+        this.B = 0;
+        this.C = 0;
+        this.Program = [];
+        this.Out = [];
+    }
+}
+
+function initComputer(puzzle) {
+    const res = new SmallComputer();
+    const reR = /Register ([A|B|C]): (\d+)/;
+    const reP = /\d+/g;
+
+    for (const line of puzzle) {
+        if (line.includes("Program")) {
+            const matches = line.match(reP);
+            if (matches) {
+                for (const match of matches) {
+                    res.Program.push(BigInt(match));
+                }
+            }
+        } else if (line.includes("Register")) {
+            const match = line.match(reR);
+            if (match) {
+                const registerValue = BigInt(match[2]);
+                if (match[1] === "A") res.A = registerValue;
+                if (match[1] === "B") res.B = registerValue;
+                if (match[1] === "C") res.C = registerValue;
+            }
+        }
+    }
+
+    return res;
+}
+
+function run(a, b, c, program) {
+    const output = [];
+    let instruction, param;
+
+    for (let pointer = 0n; pointer < BigInt(program.length); pointer += 2n) {
+        instruction = program[Number(pointer)];
+        param = program[Number(pointer) + 1];
+
+        let combo = param;
+        if (param === 4n) combo = a;
+        else if (param === 5n) combo = b;
+        else if (param === 6n) combo = c;
+
+        switch (instruction) {
+            case 0n:
+                a >>= combo;
+                break;
+            case 1n:
+                b ^= param;
+                break;
+            case 2n:
+                b = combo % 8n;
+                break;
+            case 3n:
+                if (a !== 0n) {
+                    pointer = param - 2n;
+                }
+                break;
+            case 4n:
+                b ^= c;
+                break;
+            case 5n:
+                output.push(combo % 8n);
+                break;
+            case 6n:
+                b = a >> combo;
+                break;
+            case 7n:
+                c = a >> combo;
+                break;
+        }
+    }
+
+    return output;
+}
+
+function matchesProgram(output, expected) {
+    if (output.length !== expected.length) {
+        return false;
+    }
+
+    for (let i = 0; i < output.length; i++) {
+        if (output[i] !== expected[i]) {
+            return false;
+        }
+    }
+
+    return true;
 }
 // #endregion
 
