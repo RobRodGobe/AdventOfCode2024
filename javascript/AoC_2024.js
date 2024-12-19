@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day18a(), day18b());
+    console.log(day19a(), day19b());
 }
 
 function readDayFile(day){
@@ -2022,6 +2022,83 @@ function searchForBlockage(allCoords, start, end) {
     }
 
     return allCoords[m];
+}
+// #endregion
+
+// #region Day19
+function day19a() {
+    const file = readDayFile(19);
+    const { towels, patterns } = parseDesignFile(file);
+    let count = 0;
+    const cache = new Map();
+
+    for (const pattern of patterns) {
+        if (designPossible(pattern, towels, cache)) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+function day19b() {
+    const file = readDayFile(19);
+    const { towels, patterns } = parseDesignFile(file);
+    let count = 0;
+    const cache = new Map();
+
+    for (const pattern of patterns) {
+        count += waysPossible(pattern, towels, cache);
+    }
+
+    return count;
+}
+
+function parseDesignFile(input) {
+    const [towelsPart, patternsPart] = input.split('\n\n');
+    const towels = towelsPart.split(', ');
+    const patterns = patternsPart.split('\n').filter(line => line.trim() !== '');
+    return { towels, patterns };
+}
+
+function designPossible(pattern, towels, cache) {
+    if (cache.has(pattern)) {
+        return cache.get(pattern);
+    }
+
+    for (const towel of towels) {
+        if (towel === pattern) {
+            cache.set(pattern, true);
+            return true;
+        } else if (pattern.startsWith(towel)) {
+            if (designPossible(pattern.slice(towel.length), towels, cache)) {
+                cache.set(pattern, true);
+                return true;
+            }
+        }
+    }
+
+    cache.set(pattern, false);
+    return false;
+}
+
+function waysPossible(pattern, towels, cache) {
+    if (cache.has(pattern)) {
+        return cache.get(pattern);
+    }
+
+    let ways = 0;
+
+    for (const towel of towels) {
+        if (towel === pattern) {
+            ways++;
+        } else if (pattern.startsWith(towel)) {
+            ways += waysPossible(pattern.slice(towel.length), towels, cache);
+        }
+    }
+
+    cache.set(pattern, ways);
+    return ways;
 }
 // #endregion
 

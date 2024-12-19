@@ -15,8 +15,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day18a())
-	fmt.Println(day18b())
+	fmt.Println(day19a())
+	fmt.Println(day19b())
 }
 
 // region Day1
@@ -2324,6 +2324,79 @@ func SearchForBlockage(allC []Coord, start, end Coord) Coord {
 		}
 	}
 	return allC[m]
+}
+
+// endregion
+
+// region Day19
+func day19a() int {
+	file := readDayFile(19)
+	towels, patterns := parseDesignFile(file)
+	count := 0
+	cache := make(map[string]bool)
+	for _, pattern := range patterns {
+		if designPossible(pattern, towels, cache) {
+			count++
+		}
+	}
+	return count
+}
+
+func day19b() int {
+	file := readDayFile(19)
+	towels, patterns := parseDesignFile(file)
+	count := 0
+	cache := make(map[string]int)
+	for _, pattern := range patterns {
+		count += waysPossible(pattern, towels, cache)
+	}
+	return count
+}
+
+func parseDesignFile(s string) ([]string, []string) {
+	parts := strings.Split(s, "\n\n")
+	t := strings.Split(parts[0], ", ")
+	p := strings.Split(parts[1], "\n")
+	return t, p
+}
+
+func designPossible(pattern string, ts []string, cache map[string]bool) bool {
+	b, ok := cache[pattern]
+	if ok {
+		return b
+	}
+
+	for _, t := range ts {
+		if t == pattern {
+			return true
+		} else if strings.HasPrefix(pattern, t) {
+			isPoss := designPossible(strings.TrimPrefix(pattern, t), ts, cache)
+			if isPoss {
+				cache[pattern] = true
+				return true
+			}
+		}
+	}
+	cache[pattern] = false
+	return false
+}
+
+func waysPossible(pattern string, ts []string, cache map[string]int) (ways int) {
+
+	w, ok := cache[pattern]
+	if ok {
+		return w
+	}
+
+	for _, t := range ts {
+		if t == pattern {
+			ways++
+		} else if strings.HasPrefix(pattern, t) {
+			ways += waysPossible(strings.TrimPrefix(pattern, t), ts, cache)
+		}
+	}
+	cache[pattern] = ways
+	return
 }
 
 // endregion

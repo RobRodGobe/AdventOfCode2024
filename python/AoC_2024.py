@@ -7,7 +7,7 @@ from collections import defaultdict
 
 def main():
     # Day 1
-    print(day18a(), day18b())
+    print(day19a(), day19b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1635,6 +1635,65 @@ def SearchForBlockage(allC: List[Coord], start: Coord, end: Coord) -> Coord:
             l, r, m = l, m, (l + m) // 2
 
     return allC[m]
+# endregion
+
+# region Day19
+def day19a():
+    file = readDayFile(19)
+    sections = "".join(file)
+    towels, patterns = parseDesignFile(sections)
+    count = 0
+    cache = {}
+    for pattern in patterns:
+        if designPossible(pattern, towels, cache):
+            count += 1
+    return count
+
+def day19b():
+    file = readDayFile(19)
+    sections = "".join(file)
+    towels, patterns = parseDesignFile(sections)
+    count = 0
+    cache = {}
+    for pattern in patterns:
+        count += waysPossible(pattern, towels, cache)
+    return count
+
+def parseDesignFile(s):
+    parts = s.split("\n\n")
+    t = parts[0].split(", ")
+    p = parts[1].split("\n")
+    return t, p
+
+def designPossible(pattern, ts, cache):
+    if pattern in cache:
+        return cache[pattern]
+
+    for t in ts:
+        if t == pattern:
+            return True
+        elif pattern.startswith(t):
+            isPoss = designPossible(pattern[len(t):], ts, cache)
+            if isPoss:
+                cache[pattern] = True
+                return True
+    
+    cache[pattern] = False
+    return False
+
+def waysPossible(pattern, ts, cache):
+    if pattern in cache:
+        return cache[pattern]
+
+    ways = 0
+    for t in ts:
+        if t == pattern:
+            ways += 1
+        elif pattern.startswith(t):
+            ways += waysPossible(pattern[len(t):], ts, cache)
+    
+    cache[pattern] = ways
+    return ways
 # endregion
 
 if __name__ == "__main__":

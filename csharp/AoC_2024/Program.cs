@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day18a());
+            Console.WriteLine(Day19a());
             /* Part b */
-            Console.WriteLine(Day18b());
+            Console.WriteLine(Day19b());
         }
 
         static string[] ReadDayFile(int day)
@@ -2457,6 +2457,102 @@ namespace AoC_2024
             }
 
             return allCoords[m];
+        }
+        #endregion
+    
+        #region Day19
+        public static int Day19a()
+        {
+            string[] file = ReadDayFile(19);
+            string rawFile = String.Join("\n", file);
+            var (towels, patterns) = ParseDesignFile(rawFile);
+            int count = 0;
+            var cache = new Dictionary<string, bool>();
+
+            foreach (var pattern in patterns)
+            {
+                if (DesignPossible(pattern, towels, cache))
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        public static long Day19b()
+        {
+            string[] file = ReadDayFile(19);
+            string rawFile = String.Join("\n", file);
+            var (towels, patterns) = ParseDesignFile(rawFile);
+            long count = 0;
+            var cache = new Dictionary<string, long>();
+
+            foreach (var pattern in patterns)
+            {
+                count += WaysPossible(pattern, towels, cache);
+            }
+            return count;
+        }
+
+        private static (List<string>, List<string>) ParseDesignFile(string input)
+        {
+            var parts = input.Split(new[] { "\n\n" }, StringSplitOptions.None);
+            var towels = parts[0].Split(", ").ToList();
+            var patterns = parts[1].Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            return (towels, patterns);
+        }
+
+        private static bool DesignPossible(string pattern, List<string> towels, Dictionary<string, bool> cache)
+        {
+            if (cache.TryGetValue(pattern, out bool result))
+            {
+                return result;
+            }
+
+            foreach (var towel in towels)
+            {
+                if (towel == pattern)
+                {
+                    return true;
+                }
+                else if (pattern.StartsWith(towel))
+                {
+                    var isPossible = DesignPossible(pattern.Substring(towel.Length), towels, cache);
+                    if (isPossible)
+                    {
+                        cache[pattern] = true;
+                        return true;
+                    }
+                }
+            }
+
+            cache[pattern] = false;
+            return false;
+        }
+
+        private static long WaysPossible(string pattern, List<string> towels, Dictionary<string, long> cache)
+        {
+            if (cache.TryGetValue(pattern, out long ways))
+            {
+                return ways;
+            }
+
+            ways = 0;
+
+            foreach (var towel in towels)
+            {
+                if (towel == pattern)
+                {
+                    ways++;
+                }
+                else if (pattern.StartsWith(towel))
+                {
+                    ways += WaysPossible(pattern.Substring(towel.Length), towels, cache);
+                }
+            }
+
+            cache[pattern] = ways;
+            return ways;
         }
         #endregion
     }
