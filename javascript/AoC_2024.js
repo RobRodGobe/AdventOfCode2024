@@ -1537,160 +1537,240 @@ function parseInput(file) {
 // #region Day16
 function day16a() {
     const file = readDayFile(16).split("\n");
-    const rows = file.length;
-    const cols = file[0].length;
-    const map = Array.from({ length: cols }, () => Array(rows).fill(null));
+    let start = new State(
+        new Position(file.length - 2, 1), 
+        Direction.East
+    );
 
-    let start = [0, 0];
-    let end = [0, 0];
-    for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-            map[x][y] = file[y][x];
-            if (file[y][x] === "S") start = [x, y];
-            if (file[y][x] === "E") end = [x, y];
-        }
+    if (file[start.pos.row][start.pos.col] !== 'S') {
+        start = new State(
+            new Position(1, file[0].length - 2), 
+            Direction.South
+        );
     }
 
-    const output = dijkstraShortestPath(map, start, [1, 0]);
-
-    return Math.min(
-        ...CardinalDirections.map((v) => output.cost[`${end}:${v}`] || Infinity)
-    );
+    const solver = solve(file, start);
+    return solver.cheapest;
 }
 
 function day16b() {
     const file = readDayFile(16).split("\n");
-    const rows = file.length;
-    const cols = file[0].length;
-    const map = Array.from({ length: cols }, () => Array(rows).fill(null));
-
-    let start = [0, 0];
-    let end = [0, 0];
-    for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-            map[x][y] = file[y][x];
-            if (file[y][x] === "S") start = [x, y];
-            if (file[y][x] === "E") end = [x, y];
-        }
-    }
-
-    const output = dijkstraShortestPath(map, start, [1, 0]);
-
-    const min = Math.min(
-        ...CardinalDirections.map((v) => output.cost[`${end}:${v}`] || Infinity)
+    let start = new State(
+        new Position(file.length - 2, 1), 
+        Direction.East
     );
 
-    const seats = new Set();
-    CardinalDirections.filter((v) => output.cost[`${end}:${v}`] === min).forEach(
-        (v) => {
-            backtrack(output.prevs, start, end, v, new Set()).forEach((seat) =>
-                seats.add(seat)
-            );
-        }
-    );
-
-    return seats.size;
-}
-
-class PriorityQueue {
-    constructor() {
-        this.items = [];
-    }
-
-    enqueue(element, priority) {
-        this.items.push({ element, priority });
-        this.items.sort((a, b) => a.priority - b.priority);
-    }
-
-    dequeue() {
-        return this.items.shift().element;
-    }
-
-    isEmpty() {
-        return this.items.length === 0;
-    }
-}
-const CardinalDirections = [
-    [0, -1],
-    [1, 0],
-    [0, 1],
-    [-1, 0],
-];
-
-function dijkstraShortestPath(map, start, dir) {
-    const w = map.length;
-    const h = map[0].length;
-
-    const cost = {};
-    const visited = new Set();
-    const prevs = {};
-
-    for (let x = 0; x < w; x++) {
-        for (let y = 0; y < h; y++) {
-            CardinalDirections.forEach((v) => {
-                cost[`${[x, y]}:${v}`] = Infinity;
-                prevs[`${[x, y]}:${v}`] = [];
-            });
-        }
-    }
-    cost[`${start}:${dir}`] = 0;
-
-    const queue = new PriorityQueue();
-    queue.enqueue([start, dir], 0);
-
-    while (!queue.isEmpty()) {
-        const [[x, y], v] = queue.dequeue();
-        if (map[x][y] === "E") break;
-        if (visited.has(`${[x, y]}:${v}`)) continue;
-
-        visited.add(`${[x, y]}:${v}`);
-
-        getNeighbours([x, y], v).forEach(([next, vNext, cNext]) => {
-            if (map[next[0]][next[1]] !== "#") {
-                const nextCost = cost[`${[x, y]}:${v}`] + cNext;
-                if (nextCost <= cost[`${next}:${vNext}`]) {
-                    cost[`${next}:${vNext}`] = nextCost;
-                    prevs[`${next}:${vNext}`].push([[x, y], v]);
-                    queue.enqueue([next, vNext], nextCost);
-                }
-            }
-        });
-    }
-
-    return { cost, prevs };
-}
-
-function getNeighbours([x, y], [dx, dy]) {
-    const costs = [1, 1000, 2000, 1000];
-
-    const nbs = [];
-    for (let i = 0; i < 4; i++) {
-        const next = i === 0 ? [x + dx, y + dy] : [x, y];
-        nbs.push([next, [dx, dy], costs[i]]);
-
-        // Rotate direction
-        const tmp = dx;
-        dx = -dy;
-        dy = tmp;
-    }
-
-    return nbs;
-}
-
-function backtrack(prevs, start, [x, y], [dx, dy], acc) {
-    acc.add(`${x},${y}`);
-    if (x === start[0] && y === start[1]) return acc;
-
-    const path = new Set();
-    (prevs[`${[x, y]}:${[dx, dy]}`] || []).forEach(([parentP, parentV]) => {
-        backtrack(prevs, start, parentP, parentV, acc).forEach((p) =>
-            path.add(p)
+    if (file[start.pos.row][start.pos.col] !== 'S') {
+        start = new State(
+            new Position(1, file[0].length - 2), 
+            Direction.South
         );
-    });
+    }
 
-    path.forEach((p) => acc.add(p));
+    const solver = solve(file, start);
 
-    return acc;
+    const seen = new Set();
+    const queue = [solver.end];
+    const zero = null;
+
+    while (queue.length > 0) {
+        const v = queue.shift();
+        if (v !== zero) {
+            seen.add(v.pos.hashCode());
+            for (const parent of solver.prov.get(v.hashCode()).parents) {
+                queue.push(parent);
+            }
+        }
+    }
+
+    return seen.size;
+}
+
+class Direction {
+    static East = null;
+    static South = null;
+    static West = null;
+    static North = null;
+
+    constructor(row, col) {
+        this.row = row;
+        this.col = col;
+    }
+
+    turnRight() {
+        if (this === Direction.East) return Direction.South;
+        if (this === Direction.South) return Direction.West;
+        if (this === Direction.West) return Direction.North;
+        return Direction.East;
+    }
+
+    turnLeft() {
+        if (this === Direction.East) return Direction.North;
+        if (this === Direction.North) return Direction.West;
+        if (this === Direction.West) return Direction.South;
+        return Direction.East;
+    }
+
+    equals(other) {
+        if (!other) return false;
+        return this.row === other.row && this.col === other.col;
+    }
+
+    hashCode() {
+        return `${this.row},${this.col}`;
+    }
+}
+
+Direction.East = new Direction(0, 1);
+Direction.South = new Direction(1, 0);
+Direction.West = new Direction(0, -1);
+Direction.North = new Direction(-1, 0);
+
+class Position {
+    constructor(row, col) {
+        this.row = row;
+        this.col = col;
+    }
+
+    move(direction) {
+        return new Position(this.row + direction.row, this.col + direction.col);
+    }
+
+    equals(other) {
+        if (!other) return false;
+        return this.row === other.row && this.col === other.col;
+    }
+
+    hashCode() {
+        return `${this.row},${this.col}`;
+    }
+}
+
+class State {
+    constructor(pos, direction) {
+        this.pos = pos;
+        this.dir = direction;
+    }
+
+    possible() {
+        return {
+            'straight': new State(this.pos.move(this.dir), this.dir),
+            'left': new State(this.pos, this.dir.turnLeft()),
+            'right': new State(this.pos, this.dir.turnRight())
+        };
+    }
+
+    equals(other) {
+        if (!other) return false;
+        return this.pos.equals(other.pos) && this.dir.equals(other.dir);
+    }
+
+    hashCode() {
+        return `${this.pos.hashCode()},${this.dir.hashCode()}`;
+    }
+}
+
+class Provenance {
+    constructor(cost) {
+        this.cost = cost;
+        this.parents = [];
+    }
+
+    maybeAdd(parent, cost) {
+        if (this.cost > cost) {
+            this.cost = cost;
+            this.parents = parent ? [parent] : [];
+        } else if (this.cost === cost && parent) {
+            this.parents.push(parent);
+        }
+    }
+}
+
+class Solver {
+    constructor(grid) {
+        this.grid = grid;
+        this.pq = {};
+        this.prov = new Map();
+        this.visited = new Map();
+        this.cheapest = 0;
+        this.highest = 0;
+        this.end = null;
+    }
+
+    add(v, prev, cost) {
+        if (!this.prov.has(v.hashCode())) {
+            this.prov.set(v.hashCode(), new Provenance(cost));
+        }
+        
+        this.prov.get(v.hashCode()).maybeAdd(prev, cost);
+
+        const existingCost = this.visited.get(v.hashCode());
+        if (existingCost === undefined || cost < existingCost) {
+            this.visited.set(v.hashCode(), cost);
+            
+            if (!this.pq[cost]) {
+                this.pq[cost] = [];
+            }
+            
+            this.pq[cost].push(v);
+            this.highest = Math.max(this.highest, cost);
+        }
+    }
+
+    pop(cost) {
+        const v = this.pq[cost][0];
+        this.pq[cost].shift();
+        return v;
+    }
+
+    lookup(p) {
+        return this.grid[p.row][p.col];
+    }
+
+    isEnd(p) {
+        return this.lookup(p) === 'E';
+    }
+
+    isOpen(p) {
+        return this.lookup(p) !== '#';
+    }
+}
+
+function solve(grid, start) {
+    const solver = new Solver(grid);
+    solver.add(start, null, 0);
+
+    while (true) {
+        while (!solver.pq[solver.cheapest] || 
+               solver.pq[solver.cheapest].length === 0) {
+            if (solver.cheapest > solver.highest) {
+                throw new Error("Ran out of priority queue");
+            }
+            solver.cheapest++;
+        }
+
+        const v = solver.pop(solver.cheapest);
+
+        if (solver.isEnd(v.pos)) {
+            solver.end = v;
+            return solver;
+        }
+
+        const possible = v.possible();
+        const straight = possible['straight'];
+        const left = possible['left'];
+        const right = possible['right'];
+
+        if (solver.isOpen(straight.pos)) {
+            solver.add(straight, v, solver.cheapest + 1);
+        }
+        if (solver.isOpen(left.pos)) {
+            solver.add(left, v, solver.cheapest + 1000);
+        }
+        if (solver.isOpen(right.pos)) {
+            solver.add(right, v, solver.cheapest + 1000);
+        }
+    }
 }
 // #endregion
 
