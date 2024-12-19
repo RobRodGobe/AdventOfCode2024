@@ -1933,137 +1933,259 @@ namespace AoC_2024
         #endregion
     
         #region Day16
-        static int Day16a()
+        public static int Day16a()
         {
-            string[] file = ReadDayFile(16);        
-            int rows = file.Length;
-            int cols = file[0].Length;
-            char[,] map = new char[cols, rows];
-
-            (int x, int y) start = (0, 0);
-            (int x, int y) end   = (0, 0);
-            for (int y = 0; y < rows; y++)
-                for (int x = 0; x < cols; x++)
-                {
-                    map[x, y] = file[y][x];                  
-                    if (file[y][x] == 'S') start = (x, y);
-                    if (file[y][x] == 'E')   end   = (x, y);
-                }
-
-            var output = DijkstraShortestPath(map, start, (1,0));
-
-            return CardinalDirections.Min(v => output.cost[(end, v)]);
+            string[] file = ReadDayFile(16);
+            State start = new State(new Position(file.Length - 2, 1), East);
+            if (file[start.Pos.Row][start.Pos.Col] != 'S')
+            {
+                start = new State(new Position(1, file[0].Length - 2), South);
+            }
+            Solver solver = Solve(file, start);
+            return solver.Cheapest;
         }
 
-        static int Day16b()
+        public static int Day16b()
         {
-            string[] file = ReadDayFile(16);        
-            int rows = file.Length;
-            int cols = file[0].Length;
-            char[,] map = new char[cols, rows];
+            string[] file = ReadDayFile(16);
+            State start = new State(new Position(file.Length - 2, 1), East);
+            if (file[start.Pos.Row][start.Pos.Col] != 'S')
+            {
+                start = new State(new Position(1, file[0].Length - 2), South);
+            }
+            Solver solver = Solve(file, start);
 
-            (int x, int y) start = (0, 0);
-            (int x, int y) end   = (0, 0);
-            for (int y = 0; y < rows; y++)
-                for (int x = 0; x < cols; x++)
-                {
-                    map[x, y] = file[y][x];                  
-                    if (file[y][x] == 'S') start = (x, y);
-                    if (file[y][x] == 'E')   end   = (x, y);
-                }
-
-            var output = DijkstraShortestPath(map, start, (1,0));
-
-            int min = CardinalDirections.Min(v => output.cost[(end, v)]);
-
-            HashSet<(int, int)> seats = [];
-            foreach(var v in CardinalDirections.Where(v => output.cost[(end, v)] == min))            
-                seats.UnionWith(Backtrack(output.prevs, start, end, v, []));
-
-            return seats.Count();
-        }
-
-        readonly static (int x, int y)[] CardinalDirections = [(0, -1), (1, 0), (0, 1), (-1, 0)];
-
-        static (Dictionary<((int, int), (int, int)), int> cost,
-                 Dictionary<((int, int), (int, int)), List<((int, int), (int, int))>> prevs) 
-            DijkstraShortestPath(char[,] map, (int x, int y) start, (int dx, int dy) dir)
-        {
-            int w = map.GetLength(0);
-            int h = map.GetLength(1);
-            Dictionary<((int, int), (int, int)), int> cost = [];
-            HashSet<((int, int), (int, int))> visited = [];
-            Dictionary<((int, int), (int, int)), List<((int, int), (int, int))>> prevs = [];
-            for(int x = 0; x < w; x++)            
-                for(int y = 0; y < h; y++)
-                    foreach(var v in CardinalDirections)
-                    {
-                        cost[((x, y), v)] = int.MaxValue;
-                        prevs[((x, y), v)] = [];
-                    }                                                         
-            cost[(start, dir)] = 0;
-
-            PriorityQueue<((int, int) p, (int, int) v), int> queue = new PriorityQueue<((int, int), (int, int)), int> ();
-            queue.Enqueue((start, dir), 0);
+            HashSet<Position> seen = new HashSet<Position>();
+            Queue<State> queue = new Queue<State>();
+            queue.Enqueue(solver.End);
+            State zero = null;
 
             while (queue.Count > 0)
             {
-                ((int x, int y) p, (int, int) v) = queue.Dequeue();
-                if (map[p.x, p.y] == 'E') break;
-                if (visited.Contains((p,v))) continue;
-                visited.Add((p,v));
-
-                foreach(((int x, int y) next, var vNext, int cNext) in GetNeighbours(p, v))
+                State v = queue.Dequeue();
+                if (v != zero)
                 {
-                    if (map[next.x, next.y] != '#')
+                    seen.Add(v.Pos);
+                    foreach (State parent in solver.Prov[v].Parents)
                     {
-                        int nextCost = cost[(p,v)] + cNext;
-                        if (nextCost <= cost[(next, vNext)])
-                        {
-                            cost[(next, vNext)] = nextCost;
-                            prevs[(next, vNext)].Add((p, v));
-                        }
-
-                        queue.Enqueue((next, vNext), nextCost);
+                        queue.Enqueue(parent);
                     }
-                }                    
+                }
             }
-
-            return (cost, prevs);
-        }   
-
-        static List<((int, int) p, (int, int) v, int cost)> GetNeighbours((int x, int y) p, (int dx, int dy) v)
-        {
-            int[] costs = [1, 1000, 2000, 1000];
-
-            List<((int, int) p, (int, int) v, int cost)> nbs = [];
-            for (int i = 0; i < 4; i++)
-            {
-                (int x, int y) next = i == 0 ? (p.x + v.dx, p.y + v.dy) : p;
-                nbs.Add((next, v, costs[i]));
-
-                int tmp = v.dx;
-                v.dx = -v.dy;
-                v.dy = tmp;
-            }
-
-            return nbs;
+            return seen.Count;
         }
 
-        static HashSet<(int, int)> Backtrack(Dictionary<((int, int), (int, int)), List<((int, int), (int, int))>> prevs,
-                                              (int, int) start, (int, int) p, (int, int) v, HashSet<(int, int)> acc)
+        static readonly Direction East = new Direction(0, 1);
+        static readonly Direction South = new Direction(1, 0);
+        static readonly Direction West = new Direction(0, -1);
+        static readonly Direction North = new Direction(-1, 0);
+
+        static Solver Solve(string[] grid, State start)
         {
-            acc.Add(p);
-            if(p == start) return acc;
+            Solver solver = new Solver(grid);
+            solver.Add(start, null, 0);
 
-            HashSet<(int, int)> path = [];
-            foreach (((int, int) p, (int, int) v) parent in prevs[(p, v)])           
-                path.UnionWith(Backtrack(prevs, start, parent.p, parent.v, acc));           
+            while (true)
+            {
+                while (!solver.PQ.ContainsKey(solver.Cheapest) || solver.PQ[solver.Cheapest].Count == 0)
+                {
+                    if (solver.Cheapest > solver.Highest)
+                    {
+                        throw new Exception("Ran out of priority queue");
+                    }
+                    solver.Cheapest++;
+                }
 
-            acc.UnionWith(path);
+                State v = solver.Pop(solver.Cheapest);
 
-            return acc;
+                if (solver.IsEnd(v.Pos))
+                {
+                    solver.End = v;
+                    return solver;
+                }
+
+                (State straight, State left, State right) = v.Possible();
+
+                if (solver.IsOpen(straight.Pos))
+                {
+                    solver.Add(straight, v, solver.Cheapest + 1);
+                }
+                if (solver.IsOpen(left.Pos))
+                {
+                    solver.Add(left, v, solver.Cheapest + 1000);
+                }
+                if (solver.IsOpen(right.Pos))
+                {
+                    solver.Add(right, v, solver.Cheapest + 1000);
+                }
+            }
+        }
+
+        class Direction
+        {
+            public int Row { get; }
+            public int Col { get; }
+
+            public Direction(int row, int col)
+            {
+                Row = row;
+                Col = col;
+            }
+
+            public Direction TurnRight()
+            {
+                if (this == East) return South;
+                if (this == South) return West;
+                if (this == West) return North;
+                return East;
+            }
+
+            public Direction TurnLeft()
+            {
+                if (this == East) return North;
+                if (this == North) return West;
+                if (this == West) return South;
+                return East;
+            }
+        }
+
+        class Position
+        {
+            public int Row { get; }
+            public int Col { get; }
+
+            public Position(int row, int col)
+            {
+                Row = row;
+                Col = col;
+            }
+
+            public Position Move(Direction dir) => new Position(Row + dir.Row, Col + dir.Col);
+
+            public override bool Equals(object obj)
+            {
+                if (obj is Position other)
+                {
+                    return Row == other.Row && Col == other.Col;
+                }
+                return false;
+            }
+
+            public override int GetHashCode() => HashCode.Combine(Row, Col);
+        }
+
+        class State
+        {
+            public Position Pos { get; }
+            public Direction Dir { get; }
+
+            public State(Position pos, Direction dir)
+            {
+                Pos = pos;
+                Dir = dir;
+            }
+
+            public (State straight, State left, State right) Possible()
+            {
+                return (
+                    new State(Pos.Move(Dir), Dir),
+                    new State(Pos, Dir.TurnLeft()),
+                    new State(Pos, Dir.TurnRight())
+                );
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is State other)
+                {
+                    return Pos.Equals(other.Pos) && Dir.Equals(other.Dir);
+                }
+                return false;
+            }
+
+            public override int GetHashCode() => HashCode.Combine(Pos, Dir);
+        }
+
+        class Provenance
+        {
+            public int Cost { get; set; }
+            public List<State> Parents { get; }
+
+            public Provenance(int cost)
+            {
+                Cost = cost;
+                Parents = new List<State>();
+            }
+
+            public void MaybeAdd(State parent, int cost)
+            {
+                if (Cost > cost)
+                {
+                    Cost = cost;
+                    Parents.Clear();
+                    Parents.Add(parent);
+                }
+                else if (Cost == cost)
+                {
+                    Parents.Add(parent);
+                }
+            }
+        }
+
+        class Solver
+        {
+            public string[] Grid { get; }
+            public Dictionary<int, List<State>> PQ { get; }
+            public Dictionary<State, Provenance> Prov { get; }
+            public Dictionary<State, int> Visited { get; }
+            public int Cheapest { get; set; }
+            public int Highest { get; set; }
+            public State End { get; set; }
+
+            public Solver(string[] grid)
+            {
+                Grid = grid;
+                PQ = new Dictionary<int, List<State>>();
+                Prov = new Dictionary<State, Provenance>();
+                Visited = new Dictionary<State, int>();
+                Cheapest = 0;
+                Highest = 0;
+            }
+
+            public void Add(State v, State prev, int cost)
+            {
+                if (!Prov.ContainsKey(v))
+                {
+                    Prov[v] = new Provenance(cost);
+                }
+                Prov[v].MaybeAdd(prev, cost);
+
+                if (!Visited.TryGetValue(v, out int existingCost) || cost < existingCost)
+                {
+                    Visited[v] = cost;
+                    if (!PQ.ContainsKey(cost))
+                    {
+                        PQ[cost] = new List<State>();
+                    }
+                    PQ[cost].Add(v);
+                    Highest = Math.Max(Highest, cost);
+                }
+            }
+
+            public State Pop(int cost)
+            {
+                State v = PQ[cost][0];
+                PQ[cost].RemoveAt(0);
+                return v;
+            }
+
+            public char Lookup(Position p) => Grid[p.Row][p.Col];
+
+            public bool IsEnd(Position p) => Lookup(p) == 'E';
+
+            public bool IsOpen(Position p) => Lookup(p) != '#';
         }
         #endregion
+
     }
 }
