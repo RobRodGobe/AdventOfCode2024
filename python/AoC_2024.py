@@ -7,7 +7,7 @@ from collections import defaultdict
 
 def main():
     # Day 1
-    print(day16a(), day16b())
+    print(day17a(), day17b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1431,6 +1431,121 @@ def solve(grid: List[str], start: State) -> Solver:
             solver.add(left, v, solver.cheapest + 1000)
         if solver.is_open(right.pos):
             solver.add(right, v, solver.cheapest + 1000)
+# endregion
+
+# region Day17
+def day17a():
+    file = readDayFile(17)
+    comp = init_computer(file)
+    output = run(comp.A, comp.B, comp.C, comp.Program)
+
+    return ",".join(map(str, output))
+
+def day17b():
+    file = readDayFile(17)
+    comp = init_computer(file)
+
+    queue = [{"a": 0, "n": 1}]
+    while queue:
+        item = queue.pop(0)
+        a = item["a"]
+        n = item["n"]
+
+        if n > len(comp.Program):
+            return str(a)
+
+        for i in range(8):
+            a2 = (a << 3) | i
+            output = run(a2, 0, 0, comp.Program)
+            target = comp.Program[-n:]
+
+            if matches_program(output, target):
+                queue.append({"a": a2, "n": n + 1})
+
+    return 0
+
+class SmallComputer:
+    def __init__(self):
+        self.A: int = 0
+        self.B: int = 0
+        self.C: int = 0
+        self.Program: List[int] = []
+        self.Out: List[int] = []
+
+def init_computer(puzzle: List[str]) -> SmallComputer:
+    res = SmallComputer()
+    
+    for line in puzzle:
+        if "Program" in line:
+            # Use regex to extract digits
+            digits = [int(m) for m in re.findall(r'\d', line)]
+            res.Program = digits
+        elif "Register" in line:
+            # Use regex to parse register and value
+            match = re.search(r'Register ([A-C]): (\d+)', line)
+            if match:
+                register, value = match.groups()
+                value = int(value)
+                
+                if register == "A":
+                    res.A = value
+                elif register == "B":
+                    res.B = value
+                elif register == "C":
+                    res.C = value
+    
+    return res
+
+def run(a: int, b: int, c: int, program: List[int]) -> List[int]:
+    out = []
+    pointer = 0
+
+    while pointer < len(program):
+        instruction = program[pointer]
+        param = program[pointer + 1]
+
+        # Simulate uint64 behavior with explicit masking
+        a &= 0xFFFFFFFFFFFFFFFF
+        b &= 0xFFFFFFFFFFFFFFFF
+        c &= 0xFFFFFFFFFFFFFFFF
+
+        combo = param
+        if param == 4:
+            combo = a
+        elif param == 5:
+            combo = b
+        elif param == 6:
+            combo = c
+
+        if instruction == 0:
+            a >>= combo
+        elif instruction == 1:
+            b ^= param
+        elif instruction == 2:
+            b = combo % 8
+        elif instruction == 3:
+            if a != 0:
+                pointer = param - 2
+        elif instruction == 4:
+            b ^= c
+        elif instruction == 5:
+            out.append(combo % 8)
+        elif instruction == 6:
+            b = a >> combo
+        elif instruction == 7:
+            c = a >> combo
+
+        # Mask to uint64
+        a &= 0xFFFFFFFFFFFFFFFF
+        b &= 0xFFFFFFFFFFFFFFFF
+        c &= 0xFFFFFFFFFFFFFFFF
+        
+        pointer += 2
+
+    return out
+
+def matches_program(output: List[int], expected: List[int]) -> bool:
+    return output == expected
 # endregion
 
 if __name__ == "__main__":
