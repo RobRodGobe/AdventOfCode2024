@@ -15,8 +15,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day19a())
-	fmt.Println(day19b())
+	fmt.Println(day20a())
+	fmt.Println(day20b())
 }
 
 // region Day1
@@ -2399,6 +2399,151 @@ func waysPossible(pattern string, ts []string, cache map[string]int) (ways int) 
 	return
 }
 
+// endregion
+
+// region Day20
+func day20a() int {
+	file := strings.Split(readDayFile(20), "\n")
+	
+	return getCheats(file, 2)
+}
+
+func day20b() int {
+	file := strings.Split(readDayFile(20), "\n")
+	
+	return getCheats(file, 20)
+}
+
+type shortcut struct {
+	start point
+	end   offset
+}
+
+type offset struct {
+	point    point
+	distance int
+}
+
+type point struct {
+	x int
+	y int
+}
+
+func findRoute(start, end point, walls map[point]int) map[point]int {
+	queue := []point{start}
+	visited := make(map[point]int)
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		visited[current] = len(visited)
+
+		if current == end {
+			return visited
+		}
+
+		for _, offset := range getOffsets(current, 1) {
+			if _, found := visited[offset.point]; found {
+				continue
+			}
+
+			if _, found := walls[offset.point]; found {
+				continue
+			}
+
+			queue = append(queue, offset.point)
+		}
+	}
+
+	panic("Cannot find route")
+}
+
+func findShortcuts(route map[point]int, radius int) map[int]int {
+	shortcuts := make(map[shortcut]int)
+	for current, step := range route {
+
+		offsets := getOffsets(current, radius)
+		for _, offset := range offsets {
+			routeStep, inRoute := route[offset.point]
+			if inRoute {
+				saving := routeStep - step - offset.distance
+				if saving > 0 {
+					shortcuts[shortcut{current, offset}] = saving
+				}
+			}
+		}
+	}
+
+	result := make(map[int]int)
+	for _, saving := range shortcuts {
+		result[saving]++
+	}
+
+	return result
+}
+
+func getOffsets(from point, radius int) []offset {
+	result := []offset{}
+
+	for y := radius * -1; y <= radius; y++ {
+		for x := radius * -1; x <= radius; x++ {
+			candidatePoint := point{from.x + x, from.y + y}
+			candidate := offset{
+				candidatePoint,
+				getDistance(from, candidatePoint),
+			}
+
+			if candidate.distance > 0 && candidate.distance <= radius {
+				result = append(result, candidate)
+			}
+		}
+	}
+
+	return result
+}
+
+func getDistance(from, until point) int {
+	xDistance := math.Abs(float64(from.x - until.x))
+	yDistance := math.Abs(float64(from.y - until.y))
+	return int(xDistance + yDistance)
+}
+
+func getCheats(file []string, radius int) int {
+	var start point
+	var end point
+	var walls map[point]int = make(map[point]int)
+
+	for y, line := range file {
+		for x, r := range line {
+			switch r {
+			case 'S':
+				start = point{x, y}
+			case 'E':
+				end = point{x, y}
+			case '#':
+				walls[point{x, y}]++
+			}
+		}
+	}
+
+	route := findRoute(start, end, walls)
+	cheats := findShortcuts(route, radius)
+
+	var found int
+	var greatShortcuts int
+	for k := 0; found < len(cheats); k++ {
+		if v, ok := cheats[k]; ok {
+			found++
+			
+			if k >= 100 {
+				greatShortcuts += v
+			}
+		}
+	}
+
+	return greatShortcuts
+}
 // endregion
 
 func readDayFile(day int32) string {

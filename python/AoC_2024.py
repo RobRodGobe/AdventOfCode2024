@@ -7,7 +7,7 @@ from collections import defaultdict
 
 def main():
     # Day 1
-    print(day19a(), day19b())
+    print(day20a(), day20b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1694,6 +1694,127 @@ def waysPossible(pattern, ts, cache):
     
     cache[pattern] = ways
     return ways
+# endregion
+
+# region Day20
+def day20a():
+    file = readDayFile(20)
+    return getCheats(file, 2)
+
+def day20b():
+    file = readDayFile(20)
+    return getCheats(file, 20)
+
+class Point:
+    def __init__(self, x: int, y: int):
+        self.x = x
+        self.y = y
+    
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+    
+    def __hash__(self):
+        return hash((self.x, self.y))
+
+class Offset:
+    def __init__(self, point: Point, distance: int):
+        self.point = point
+        self.distance = distance
+
+class Shortcut:
+    def __init__(self, start: Point, end: Offset):
+        self.start = start
+        self.end = end
+
+def findRoute(start: Point, end: Point, walls: Dict[Point, int]) -> Dict[Point, int]:
+    queue = [start]
+    visited = {}
+
+    while queue:
+        current = queue.pop(0)
+        visited[current] = len(visited)
+
+        if current == end:
+            return visited
+
+        for offset in getOffsets(current, 1):
+            if offset.point in visited:
+                continue
+
+            if offset.point in walls:
+                continue
+
+            queue.append(offset.point)
+
+    raise ValueError("Cannot find route")
+
+def findShortcuts(route: Dict[Point, int], radius: int) -> Dict[int, int]:
+    shortcuts = {}
+    for current, step in route.items():
+        offsets = getOffsets(current, radius)
+        for offset in offsets:
+            if offset.point in route:
+                routeStep = route[offset.point]
+                saving = routeStep - step - offset.distance
+                if saving > 0:
+                    shortcuts[Shortcut(current, offset)] = saving
+
+    result = {}
+    for _, saving in shortcuts.items():
+        result[saving] = result.get(saving, 0) + 1
+
+    return result
+
+def getOffsets(from_point: Point, radius: int) -> List[Offset]:
+    result = []
+
+    for y in range(-radius, radius + 1):
+        for x in range(-radius, radius + 1):
+            candidatePoint = Point(from_point.x + x, from_point.y + y)
+            candidate = Offset(
+                candidatePoint,
+                getDistance(from_point, candidatePoint)
+            )
+
+            if 0 < candidate.distance <= radius:
+                result.append(candidate)
+
+    return result
+
+def getDistance(from_point: Point, until_point: Point) -> int:
+    xDistance = abs(from_point.x - until_point.x)
+    yDistance = abs(from_point.y - until_point.y)
+    return int(xDistance + yDistance)
+
+def getCheats(file: List[str], radius: int) -> int:
+    start = None
+    end = None
+    walls = {}
+
+    for y, line in enumerate(file):
+        for x, r in enumerate(line):
+            if r == 'S':
+                start = Point(x, y)
+            elif r == 'E':
+                end = Point(x, y)
+            elif r == '#':
+                walls[Point(x, y)] = 1
+
+    route = findRoute(start, end, walls)
+    cheats = findShortcuts(route, radius)
+
+    found = 0
+    greatShortcuts = 0
+    k = 0
+    while found < len(cheats):
+        if k in cheats:
+            found += 1
+            
+            if k >= 100:
+                greatShortcuts += cheats[k]
+        k += 1
+
+    return greatShortcuts
 # endregion
 
 if __name__ == "__main__":

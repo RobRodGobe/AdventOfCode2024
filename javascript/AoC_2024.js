@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day19a(), day19b());
+    console.log(day20a(), day20b());
 }
 
 function readDayFile(day){
@@ -2099,6 +2099,142 @@ function waysPossible(pattern, towels, cache) {
 
     cache.set(pattern, ways);
     return ways;
+}
+// #endregion
+
+// #region Day20
+function day20a() {
+    const file = readDayFile(20).split('\n');
+    return getCheats(file, 2);
+}
+
+function day20b() {
+    const file = readDayFile(20).split('\n');
+    return getCheats(file, 20);
+}
+
+class Point {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    toString() {
+        return `${this.x},${this.y}`;
+    }
+}
+
+class Offset {
+    constructor(point, distance) {
+        this.point = point;
+        this.distance = distance;
+    }
+}
+
+function findRoute(start, end, walls) {
+    const queue = [start];
+    const visited = new Map();
+    visited.set(start.toString(), 0);
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        const currentSteps = visited.get(current.toString());
+
+        if (current.toString() === end.toString()) return visited;
+
+        for (const offset of getOffsets(current, 1)) {
+            if (!visited.has(offset.point.toString()) && !walls.has(offset.point.toString())) {
+                queue.push(offset.point);
+                visited.set(offset.point.toString(), currentSteps + 1);
+            }
+        }
+    }
+
+    throw new Error("Cannot find route");
+}
+
+function findShortcuts(route, radius) {
+    const shortcuts = new Map();
+
+    for (const [current, step] of route) {
+        for (const offset of getOffsets(parsePoint(current), radius)) {
+            const routeStep = route.get(offset.point.toString());
+            if (routeStep !== undefined) {
+                const saving = routeStep - step - offset.distance;
+                if (saving > 0) {
+                    shortcuts.set(`${current}->${offset.point}`, saving);
+                }
+            }
+        }
+    }
+
+    const result = new Map();
+    for (const saving of shortcuts.values()) {
+        result.set(saving, (result.get(saving) || 0) + 1);
+    }
+
+    return result;
+}
+
+function getOffsets(from, radius) {
+    const result = [];
+
+    for (let y = -radius; y <= radius; y++) {
+        for (let x = -radius; x <= radius; x++) {
+            const candidatePoint = new Point(from.x + x, from.y + y);
+            const distance = getDistance(from, candidatePoint);
+
+            if (distance > 0 && distance <= radius) {
+                result.push(new Offset(candidatePoint, distance));
+            }
+        }
+    }
+
+    return result;
+}
+
+function getDistance(from, until) {
+    return Math.abs(from.x - until.x) + Math.abs(from.y - until.y);
+}
+
+function getCheats(file, radius) {
+    let start, end;
+    const walls = new Set();
+
+    file.forEach((line, y) => {
+        for (let x = 0; x < line.length; x++) {
+            const point = new Point(x, y);
+            switch (line[x]) {
+                case 'S':
+                    start = point;
+                    break;
+                case 'E':
+                    end = point;
+                    break;
+                case '#':
+                    walls.add(point.toString());
+                    break;
+            }
+        }
+    });
+
+    const route = findRoute(start, end, walls);
+    const cheats = findShortcuts(route, radius);
+
+    let found = 0, greatShortcuts = 0;
+    for (let k = 0; found < cheats.size; k++) {
+        if (cheats.has(k)) {
+            found++;
+            if (k >= 100) greatShortcuts += cheats.get(k);
+        }
+    }
+
+    return greatShortcuts;
+}
+
+function parsePoint(pointStr) {
+    const [x, y] = pointStr.split(',').map(Number);
+    return new Point(x, y);
 }
 // #endregion
 

@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day19a());
+            Console.WriteLine(Day20a());
             /* Part b */
-            Console.WriteLine(Day19b());
+            Console.WriteLine(Day20b());
         }
 
         static string[] ReadDayFile(int day)
@@ -2553,6 +2553,139 @@ namespace AoC_2024
 
             cache[pattern] = ways;
             return ways;
+        }
+        #endregion
+    
+        #region Day20
+        static int Day20a()
+        {
+            string[] file = ReadDayFile(20);
+            return GetCheats(file, 2);
+        }
+
+        static int Day20b()
+        {
+            string[] file = ReadDayFile(20);
+            return GetCheats(file, 20);
+        }
+
+        record Point(int X, int Y)
+        {
+            public override int GetHashCode() => HashCode.Combine(X, Y);
+        }
+
+        record Offset(Point Point, int Distance);
+
+        static Dictionary<Point, int> FindRoute(Point start, Point end, HashSet<Point> walls)
+        {
+            var queue = new Queue<Point>();
+            queue.Enqueue(start);
+
+            var visited = new Dictionary<Point, int> { [start] = 0 };
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                if (current == end) return visited;
+
+                foreach (var offset in GetOffsets(current, 1))
+                {
+                    if (!visited.ContainsKey(offset.Point) && !walls.Contains(offset.Point))
+                    {
+                        queue.Enqueue(offset.Point);
+                        visited[offset.Point] = visited[current] + 1;
+                    }
+                }
+            }
+
+            throw new InvalidOperationException("Cannot find route");
+        }
+
+        static Dictionary<int, int> FindShortcuts(Dictionary<Point, int> route, int radius)
+        {
+            var shortcuts = new Dictionary<(Point, Point), int>();
+
+            foreach (var (current, step) in route)
+            {
+                foreach (var offset in GetOffsets(current, radius))
+                {
+                    if (route.TryGetValue(offset.Point, out var routeStep))
+                    {
+                        var saving = routeStep - step - offset.Distance;
+                        if (saving > 0)
+                        {
+                            shortcuts[(current, offset.Point)] = saving;
+                        }
+                    }
+                }
+            }
+
+            var result = new Dictionary<int, int>();
+            foreach (var saving in shortcuts.Values)
+            {
+                if (result.ContainsKey(saving))
+                    result[saving]++;
+                else
+                    result[saving] = 1;
+            }
+
+            return result;
+        }
+
+        static IEnumerable<Offset> GetOffsets(Point from, int radius)
+        {
+            for (int y = -radius; y <= radius; y++)
+            {
+                for (int x = -radius; x <= radius; x++)
+                {
+                    var candidatePoint = new Point(from.X + x, from.Y + y);
+                    var distance = GetDistance(from, candidatePoint);
+
+                    if (distance > 0 && distance <= radius)
+                        yield return new Offset(candidatePoint, distance);
+                }
+            }
+        }
+
+        static int GetDistance(Point from, Point until)
+        {
+            return Math.Abs(from.X - until.X) + Math.Abs(from.Y - until.Y);
+        }
+
+        static int GetCheats(string[] file, int radius)
+        {
+            Point start = null, end = null;
+            var walls = new HashSet<Point>();
+
+            for (int y = 0; y < file.Length; y++)
+            {
+                var line = file[y];
+                for (int x = 0; x < line.Length; x++)
+                {
+                    var point = new Point(x, y);
+                    switch (line[x])
+                    {
+                        case 'S': start = point; break;
+                        case 'E': end = point; break;
+                        case '#': walls.Add(point); break;
+                    }
+                }
+            }
+
+            var route = FindRoute(start, end, walls);
+            var cheats = FindShortcuts(route, radius);
+
+            int found = 0, greatShortcuts = 0;
+            for (int k = 0; found < cheats.Count; k++)
+            {
+                if (cheats.TryGetValue(k, out var count))
+                {
+                    found++;
+                    if (k >= 100) greatShortcuts += count;
+                }
+            }
+
+            return greatShortcuts;
         }
         #endregion
     }
