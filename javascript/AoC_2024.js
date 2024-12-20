@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day20a(), day20b());
+    console.log(day21a(), day21b());
 }
 
 function readDayFile(day){
@@ -2235,6 +2235,20 @@ function getCheats(file, radius) {
 function parsePoint(pointStr) {
     const [x, y] = pointStr.split(',').map(Number);
     return new Point(x, y);
+}
+// #endregion
+
+// #region Day21
+function day21a() {
+    const file = readDayFile(21).split('\n');
+
+    return file.length - 1;
+}
+
+function day21b() {
+    const file = readDayFile(21).split('\n');
+
+    return file.length - 1;
 }
 // #endregion
 

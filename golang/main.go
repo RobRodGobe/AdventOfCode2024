@@ -15,8 +15,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day20a())
-	fmt.Println(day20b())
+	fmt.Println(day21a())
+	fmt.Println(day21b())
 }
 
 // region Day1
@@ -2543,6 +2543,20 @@ func getCheats(file []string, radius int) int {
 	}
 
 	return greatShortcuts
+}
+// endregion
+
+// region Day21
+func day21a() int {
+	file := strings.Split(readDayFile(21), "\n")
+
+	return len(file) - 1
+}
+
+func day21b() int {
+	file := strings.Split(readDayFile(21), "\n")
+
+	return len(file) - 1
 }
 // endregion
 

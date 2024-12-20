@@ -7,7 +7,7 @@ from collections import defaultdict
 
 def main():
     # Day 1
-    print(day20a(), day20b())
+    print(day21a(), day21b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1815,6 +1815,16 @@ def getCheats(file: List[str], radius: int) -> int:
         k += 1
 
     return greatShortcuts
+# endregion
+
+# region Day21
+def day21a():
+    file = readDayFile(21)
+    return len(file)
+
+def day21b():
+    file = readDayFile(21)
+    return len(file)
 # endregion
 
 if __name__ == "__main__":

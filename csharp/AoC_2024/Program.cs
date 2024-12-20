@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day20a());
+            Console.WriteLine(Day21a());
             /* Part b */
-            Console.WriteLine(Day20b());
+            Console.WriteLine(Day21b());
         }
 
         static string[] ReadDayFile(int day)
@@ -2686,6 +2686,22 @@ namespace AoC_2024
             }
 
             return greatShortcuts;
+        }
+        #endregion
+    
+        #region Day21
+        static int Day21a()
+        {
+            string[] file = ReadDayFile(21);
+
+            return file.Count();
+        }
+
+        static int Day21b()
+        {
+            string[] file = ReadDayFile(21);
+
+            return file.Count();
         }
         #endregion
     }
