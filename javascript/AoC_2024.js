@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day21a(), day21b());
+    console.log(day22a(), day22b());
 }
 
 function readDayFile(day){
@@ -2426,6 +2426,125 @@ function splitSequence(inputSeq) {
     
     return result;
 }
+// #endregion
+
+// #region Day22
+function day22a() {
+    const file = readDayFile(22).split("\n");
+
+    const seeds = file.map(line => BigInt(line));
+
+    return Number(seeds.reduce((sum, n) => sum + nextN(n, 2000), 0n));
+}
+
+function day22b() {
+    const file = readDayFile(22).split("\n");
+
+    const seeds = file.map(line => BigInt(line));
+
+    const sequencePayoffs = monkeyFromSeed(seeds, 2000);
+    
+    let max = 0n;
+    for (const value of sequencePayoffs.values()) {
+        max = value > max ? value : max;
+    }
+
+    return Number(max);
+}
+
+const PRUNE = 16777216n;
+
+class Sequence {
+    constructor(first, second, third, fourth) {
+        this.first = first;
+        this.second = second;
+        this.third = third;
+        this.fourth = fourth;
+    }
+
+    equals(other) {
+        return this.first === other.first &&
+               this.second === other.second &&
+               this.third === other.third &&
+               this.fourth === other.fourth;
+    }
+
+    hashCode() {
+        return `${this.first},${this.second},${this.third},${this.fourth}`;
+    }
+}
+
+class Price {
+    constructor(cost, change) {
+        this.cost = cost;
+        this.change = change;
+    }
+}
+
+function next(n) {
+    n = prune(mix(n << 6n, n));
+    n = prune(mix(n >> 5n, n));
+    return prune(mix(n << 11n, n));
+}
+
+function mix(input, secret) {
+    return input ^ secret;
+}
+
+function prune(n) {
+    return n % PRUNE;
+}
+
+function nextN(seed, simSteps) {
+    let random = seed;
+    for (let i = 0; i < simSteps; i++) {
+        random = next(random);
+    }
+    return random;
+}
+
+function allPrices(seed, simSteps) {
+    let random = seed;
+    const prices = new Array(simSteps + 1);
+    prices[0] = new Price(seed, 0n);
+
+    for (let i = 0; i < simSteps; i++) {
+        random = next(random);
+        const cost = random % 10n;
+        prices[i + 1] = new Price(cost, cost - prices[i].cost);
+    }
+
+    return prices;
+}
+
+function monkeyFromSeed(seeds, simSteps) {
+    const retval = new Map();
+
+    for (const seed of seeds) {
+        const prices = allPrices(seed, simSteps);
+        const seen = new Set();
+
+        for (let i = 4; i <= simSteps; i++) {
+            const seq = new Sequence(
+                prices[i - 3].change, 
+                prices[i - 2].change, 
+                prices[i - 1].change, 
+                prices[i].change
+            );
+
+            const seqHash = seq.hashCode();
+
+            if (!seen.has(seqHash)) {
+                seen.add(seqHash);
+                const currentValue = retval.get(seqHash) || 0n;
+                retval.set(seqHash, currentValue + prices[i].cost);
+            }
+        }
+    }
+
+    return retval;
+}
+
 // #endregion
 
 main();

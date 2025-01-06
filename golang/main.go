@@ -15,8 +15,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day21a())
-	fmt.Println(day21b())
+	fmt.Println(day22a())
+	fmt.Println(day22b())
 }
 
 // region Day1
@@ -2764,6 +2764,114 @@ func splitSequence(input []string) [][]string {
 	return result
 }
 
+// endregion
+
+// region Day22
+func day22a() int {
+	file := strings.Split(readDayFile(22), "\n")
+
+	seeds := make([]int, len(file))
+	for i, seed := range file {
+		s, err := strconv.ParseInt(seed, 10, 0)
+		if err != nil {
+			log.Fatal("Couldn't parse int:", seed)
+		}
+		seeds[i] = int(s)
+	}
+
+	sum := 0
+	for _, n := range seeds {
+		sum += NextN(n, 2000)
+	}
+	return sum
+}
+
+func day22b() int {
+	file := strings.Split(readDayFile(22), "\n")
+	seeds := make([]int, len(file))
+	for i, seed := range file {
+		s, err := strconv.ParseInt(seed, 10, 0)
+		if err != nil {
+			log.Fatal("Couldn't parse int:", seed)
+		}
+		seeds[i] = int(s)
+	}
+
+	max := 0
+
+	sequencePayoffs := MonkeyFromSeed(seeds, 2000)
+	for _, v := range sequencePayoffs {
+		if v > max {
+			max = v
+		}
+	}
+	return max
+}
+
+const pRUNE = 16777216
+
+func next(n int) (out int) {
+	out = prune(mix(n<<6, n))
+	out = prune(mix(out>>5, out))
+	out = prune(mix(out<<11, out))
+	return
+}
+
+func mix(in, secret int) int {
+	return in ^ secret
+}
+
+func prune(n int) int {
+	return n % pRUNE
+}
+
+func NextN(seed, simSteps int) (random int) {
+	random = seed
+	for i := 0; i < simSteps; i++ {
+		random = next(random)
+	}
+	return
+}
+
+func allPrices(seed, simSteps int) []price {
+	random := seed
+	retval := make([]price, simSteps+1)
+	retval[0] = price{seed, 0}
+	for i := 0; i < simSteps; i++ {
+		random = next(random)
+		cost := random % 10
+		newPrice := price{cost, cost - retval[i].cost}
+		retval[i+1] = newPrice
+	}
+
+	return retval
+}
+
+func MonkeyFromSeed(seeds []int, simSteps int) Monkey {
+	retval := make(map[sequence]int)
+	for _, seed := range seeds {
+		prices := allPrices(seed, simSteps)
+		seen := make(map[sequence]struct{})
+		for i := 4; i <= simSteps; i++ {
+			seq := sequence{prices[i-3].change, prices[i-2].change, prices[i-1].change, prices[i].change}
+			if _, ok := seen[seq]; !ok {
+				seen[seq] = struct{}{}
+				retval[seq] += prices[i].cost
+			}
+		}
+	}
+	return retval
+}
+
+type sequence struct {
+	first, seconds, third, fourth int
+}
+
+type price struct {
+	cost, change int
+}
+
+type Monkey map[sequence]int
 // endregion
 
 func readDayFile(day int32) string {

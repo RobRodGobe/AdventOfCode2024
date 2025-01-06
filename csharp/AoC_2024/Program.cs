@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day21a());
+            Console.WriteLine(Day22a());
             /* Part b */
-            Console.WriteLine(Day21b());
+            Console.WriteLine(Day22b());
         }
 
         static string[] ReadDayFile(int day)
@@ -2901,6 +2901,160 @@ namespace AoC_2024
             }
 
             return result;
+        }
+        #endregion
+    
+        #region Day22
+        static long Day22a()
+        {
+            string[] file = ReadDayFile(22);
+
+            var seeds = file.Select(line =>
+            {
+                if (long.TryParse(line, out var result))
+                    return result;
+                throw new Exception($"Couldn't parse int: {line}");
+            }).ToArray();
+
+
+            long sum = seeds.Sum(n => NextN(n, 2000));
+            return sum;
+        }
+
+        static long Day22b()
+        {
+            string[] file = ReadDayFile(22);
+
+            var seeds = file.Select(line =>
+            {
+                if (long.TryParse(line, out var result))
+                    return result;
+                throw new Exception($"Couldn't parse int: {line}");
+            }).ToArray();
+            long max = 0;
+            var sequencePayoffs = MonkeyFromSeed(seeds, 2000);
+
+            foreach (var value in sequencePayoffs.Values)
+            {
+                if (value > max)
+                    max = value;
+            }
+
+            return max;
+        }
+
+        const long PRUNE = 16777216;
+
+        static long NextN(long seed, int simSteps)
+        {
+            var random = seed;
+            for (var i = 0; i < simSteps; i++)
+            {
+                random = Next(random);
+            }
+            return random;
+        }
+
+        static long Next(long n)
+        {
+            n = Prune(Mix(n << 6, n));
+            n = Prune(Mix(n >> 5, n));
+            return Prune(Mix(n << 11, n));
+        }
+
+        static long Mix(long input, long secret)
+        {
+            return input ^ secret;
+        }
+
+        static long Prune(long n)
+        {
+            return n % PRUNE;
+        }
+
+        static Dictionary<Sequence, long> MonkeyFromSeed(long[] seeds, int simSteps)
+        {
+            var retval = new Dictionary<Sequence, long>();
+
+            foreach (var seed in seeds)
+            {
+                var prices = AllPrices(seed, simSteps);
+                var seen = new HashSet<Sequence>();
+
+                for (var i = 4; i <= simSteps; i++)
+                {
+                    var seq = new Sequence(prices[i - 3].Change, prices[i - 2].Change, prices[i - 1].Change, prices[i].Change);
+
+                    if (!seen.Contains(seq))
+                    {
+                        seen.Add(seq);
+                        if (!retval.ContainsKey(seq))
+                            retval[seq] = 0;
+
+                        retval[seq] += prices[i].Cost;
+                    }
+                }
+            }
+
+            return retval;
+        }
+
+        static Price[] AllPrices(long seed, int simSteps)
+        {
+            var random = seed;
+            var prices = new Price[simSteps + 1];
+            prices[0] = new Price(seed, 0);
+
+            for (var i = 0; i < simSteps; i++)
+            {
+                random = Next(random);
+                var cost = random % 10;
+                prices[i + 1] = new Price(cost, cost - prices[i].Cost);
+            }
+
+            return prices;
+        }
+
+        struct Sequence
+        {
+            public long First;
+            public long Second;
+            public long Third;
+            public long Fourth;
+
+            public Sequence(long first, long second, long third, long fourth)
+            {
+                First = first;
+                Second = second;
+                Third = third;
+                Fourth = fourth;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Sequence sequence &&
+                    First == sequence.First &&
+                    Second == sequence.Second &&
+                    Third == sequence.Third &&
+                    Fourth == sequence.Fourth;
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(First, Second, Third, Fourth);
+            }
+        }
+
+        struct Price
+        {
+            public long Cost;
+            public long Change;
+
+            public Price(long cost, long change)
+            {
+                Cost = cost;
+                Change = change;
+            }
         }
         #endregion
     }

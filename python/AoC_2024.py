@@ -7,7 +7,7 @@ from collections import defaultdict
 
 def main():
     # Day 1
-    print(day21a(), day21b())
+    print(day22a(), day22b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -1983,6 +1983,110 @@ def split_sequence(input_seq: List[str]) -> List[List[str]]:
             current = []
     
     return result
+# endregion
+
+# region Day22
+def day22a():
+    file = readDayFile(22)
+    seeds = []
+    for seed in file:
+        seeds.append(int(seed))
+    
+    sum_result = 0
+    for n in seeds:
+        sum_result += next_n(n, 2000)
+    
+    return sum_result
+
+def day22b():
+    file = readDayFile(22)
+    seeds = []
+    for seed in file:
+        seeds.append(int(seed))
+    
+    max_val = 0
+    
+    sequence_payoffs = monkey_from_seed(seeds, 2000)
+    for v in sequence_payoffs.values():
+        max_val = max(max_val, v)
+    
+    return max_val
+
+PRUNE = 16777216
+
+class Sequence:
+    def __init__(self, first: int, seconds: int, third: int, fourth: int):
+        self.first = first
+        self.seconds = seconds
+        self.third = third
+        self.fourth = fourth
+    
+    def __eq__(self, other):
+        if not isinstance(other, Sequence):
+            return False
+        return (self.first == other.first and 
+                self.seconds == other.seconds and 
+                self.third == other.third and 
+                self.fourth == other.fourth)
+    
+    def __hash__(self):
+        return hash((self.first, self.seconds, self.third, self.fourth))
+
+class Price:
+    def __init__(self, cost: int, change: int):
+        self.cost = cost
+        self.change = change
+
+def next(n: int) -> int:
+    out = prune(mix(n << 6, n))
+    out = prune(mix(out >> 5, out))
+    out = prune(mix(out << 11, out))
+    return out
+
+def mix(in_val: int, secret: int) -> int:
+    return in_val ^ secret
+
+def prune(n: int) -> int:
+    return n % PRUNE
+
+def next_n(seed: int, sim_steps: int) -> int:
+    random = seed
+    for _ in range(sim_steps):
+        random = next(random)
+    return random
+
+def all_prices(seed: int, sim_steps: int) -> List[Price]:
+    random = seed
+    retval = [Price(seed, 0)]
+    
+    for _ in range(sim_steps):
+        random = next(random)
+        cost = random % 10
+        new_price = Price(cost, cost - retval[-1].cost)
+        retval.append(new_price)
+    
+    return retval
+
+def monkey_from_seed(seeds: List[int], sim_steps: int) -> Dict[Sequence, int]:
+    retval = {}
+    
+    for seed in seeds:
+        prices = all_prices(seed, sim_steps)
+        seen = set()
+        
+        for i in range(4, sim_steps + 1):
+            seq = Sequence(
+                prices[i-3].change, 
+                prices[i-2].change, 
+                prices[i-1].change, 
+                prices[i].change
+            )
+            
+            if seq not in seen:
+                seen.add(seq)
+                retval[seq] = retval.get(seq, 0) + prices[i].cost
+    
+    return retval
 # endregion
 
 if __name__ == "__main__":
