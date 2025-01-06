@@ -1770,7 +1770,7 @@ def getOffsets(from_point: Point, radius: int) -> List[Offset]:
 
     for y in range(-radius, radius + 1):
         for x in range(-radius, radius + 1):
-            candidatePoint = Point(from_point.x + x, from_point.y + y)
+            candidatePoint = Point(from_point.X + x, from_point.Y + y)
             candidate = Offset(
                 candidatePoint,
                 getDistance(from_point, candidatePoint)
@@ -1782,8 +1782,8 @@ def getOffsets(from_point: Point, radius: int) -> List[Offset]:
     return result
 
 def getDistance(from_point: Point, until_point: Point) -> int:
-    xDistance = abs(from_point.x - until_point.x)
-    yDistance = abs(from_point.y - until_point.y)
+    xDistance = abs(from_point.X - until_point.X)
+    yDistance = abs(from_point.Y - until_point.Y)
     return int(xDistance + yDistance)
 
 def getCheats(file: List[str], radius: int) -> int:
@@ -1820,11 +1820,169 @@ def getCheats(file: List[str], radius: int) -> int:
 # region Day21
 def day21a():
     file = readDayFile(21)
-    return len(file)
+    num_map = {
+        "A": Coord(2, 0),
+        "0": Coord(1, 0),
+        "1": Coord(0, 1),
+        "2": Coord(1, 1),
+        "3": Coord(2, 1),
+        "4": Coord(0, 2),
+        "5": Coord(1, 2),
+        "6": Coord(2, 2),
+        "7": Coord(0, 3),
+        "8": Coord(1, 3),
+        "9": Coord(2, 3)
+    }
+
+    dir_map = {
+        "A": Coord(2, 1),
+        "^": Coord(1, 1),
+        "<": Coord(0, 0),
+        "v": Coord(1, 0),
+        ">": Coord(2, 0)
+    }
+
+    robots = 2
+
+    return get_sequence(file, num_map, dir_map, robots)
+
 
 def day21b():
     file = readDayFile(21)
-    return len(file)
+    num_map = {
+        "A": Coord(2, 0),
+        "0": Coord(1, 0),
+        "1": Coord(0, 1),
+        "2": Coord(1, 1),
+        "3": Coord(2, 1),
+        "4": Coord(0, 2),
+        "5": Coord(1, 2),
+        "6": Coord(2, 2),
+        "7": Coord(0, 3),
+        "8": Coord(1, 3),
+        "9": Coord(2, 3)
+    }
+
+    dir_map = {
+        "A": Coord(2, 1),
+        "^": Coord(1, 1),
+        "<": Coord(0, 0),
+        "v": Coord(1, 0),
+        ">": Coord(2, 0)
+    }
+
+    robots = 25
+
+    return get_sequence(file, num_map, dir_map, robots)
+
+def abs(n: int) -> int:
+    return -n if n < 0 else n
+
+def atoi_no_err(s: str) -> int:
+    return int(s)
+
+def get_sequence(input_lines: List[str], num_map: Dict[str, Coord], dir_map: Dict[str, Coord], robot_count: int) -> int:
+    total = 0
+    cache = {}
+
+    for line in input_lines:
+        chars = list(line.replace("\n", ""))
+        moves = get_num_pad_sequence(chars, "A", num_map)
+        length = count_sequences(moves, robot_count, 1, cache, dir_map)
+        total += atoi_no_err(line[:3].lstrip('0')) * length
+
+    return total
+
+def get_num_pad_sequence(input_chars: List[str], start: str, num_map: Dict[str, Coord]) -> List[str]:
+    curr = num_map[start]
+    seq = []
+
+    for char in input_chars:
+        dest = num_map[char]
+        dx, dy = dest.X - curr.X, dest.Y - curr.Y
+
+        horiz = [">"] * abs(dx) if dx >= 0 else ["<"] * abs(dx)
+        vert = ["^"] * abs(dy) if dy >= 0 else ["v"] * abs(dy)
+
+        if curr.Y == 0 and dest.X == 0:
+            seq.extend(vert)
+            seq.extend(horiz)
+        elif curr.X == 0 and dest.Y == 0:
+            seq.extend(horiz)
+            seq.extend(vert)
+        elif dx < 0:
+            seq.extend(horiz)
+            seq.extend(vert)
+        else:
+            seq.extend(vert)
+            seq.extend(horiz)
+
+        curr = dest
+        seq.append("A")
+    
+    return seq
+
+def count_sequences(input_seq: List[str], max_robots: int, robot: int, cache: Dict[str, List[int]], dir_map: Dict[str, Coord]) -> int:
+    key = "".join(input_seq)
+    if key in cache and robot <= len(cache[key]) and cache[key][robot-1] != 0:
+        return cache[key][robot-1]
+
+    if key not in cache:
+        cache[key] = [0] * max_robots
+
+    seq = get_dir_pad_sequence(input_seq, "A", dir_map)
+    if robot == max_robots:
+        return len(seq)
+
+    steps = split_sequence(seq)
+    count = 0
+    for step in steps:
+        c = count_sequences(step, max_robots, robot+1, cache, dir_map)
+        count += c
+
+    cache[key][robot-1] = count
+    return count
+
+def get_dir_pad_sequence(input_chars: List[str], start: str, dir_map: Dict[str, Coord]) -> List[str]:
+    curr = dir_map[start]
+    seq = []
+
+    for char in input_chars:
+        dest = dir_map[char]
+        dx, dy = dest.X - curr.X, dest.Y - curr.Y
+
+        horiz = [">"] * abs(dx) if dx >= 0 else ["<"] * abs(dx)
+        vert = ["^"] * abs(dy) if dy >= 0 else ["v"] * abs(dy)
+
+        if curr.X == 0 and dest.Y == 1:
+            seq.extend(horiz)
+            seq.extend(vert)
+        elif curr.Y == 1 and dest.X == 0:
+            seq.extend(vert)
+            seq.extend(horiz)
+        elif dx < 0:
+            seq.extend(horiz)
+            seq.extend(vert)
+        else:
+            seq.extend(vert)
+            seq.extend(horiz)
+
+        curr = dest
+        seq.append("A")
+    
+    return seq
+
+def split_sequence(input_seq: List[str]) -> List[List[str]]:
+    result = []
+    current = []
+
+    for char in input_seq:
+        current.append(char)
+        if char == "A":
+            result.append(current)
+            current = []
+    
+    return result
 # endregion
 
 if __name__ == "__main__":

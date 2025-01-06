@@ -2240,15 +2240,191 @@ function parsePoint(pointStr) {
 
 // #region Day21
 function day21a() {
-    const file = readDayFile(21).split('\n');
+    const file = readDayFile(21).split("\n");
+    const numMap = {
+        "A": new Coord(2, 0),
+        "0": new Coord(1, 0),
+        "1": new Coord(0, 1),
+        "2": new Coord(1, 1),
+        "3": new Coord(2, 1),
+        "4": new Coord(0, 2),
+        "5": new Coord(1, 2),
+        "6": new Coord(2, 2),
+        "7": new Coord(0, 3),
+        "8": new Coord(1, 3),
+        "9": new Coord(2, 3)
+    };
 
-    return file.length - 1;
+    const dirMap = {
+        "A": new Coord(2, 1),
+        "^": new Coord(1, 1),
+        "<": new Coord(0, 0),
+        "v": new Coord(1, 0),
+        ">": new Coord(2, 0)
+    };
+
+    const robots = 2;
+
+    return getSequence(file, numMap, dirMap, robots);
 }
 
 function day21b() {
-    const file = readDayFile(21).split('\n');
+    const file = readDayFile(21).split("\n");
+    const numMap = {
+        "A": new Coord(2, 0),
+        "0": new Coord(1, 0),
+        "1": new Coord(0, 1),
+        "2": new Coord(1, 1),
+        "3": new Coord(2, 1),
+        "4": new Coord(0, 2),
+        "5": new Coord(1, 2),
+        "6": new Coord(2, 2),
+        "7": new Coord(0, 3),
+        "8": new Coord(1, 3),
+        "9": new Coord(2, 3)
+    };
 
-    return file.length - 1;
+    const dirMap = {
+        "A": new Coord(2, 1),
+        "^": new Coord(1, 1),
+        "<": new Coord(0, 0),
+        "v": new Coord(1, 0),
+        ">": new Coord(2, 0)
+    };
+
+    const robots = 25;
+
+    return getSequence(file, numMap, dirMap, robots);
+}
+
+function abs(n) {
+    return n < 0 ? -n : n;
+}
+
+function atoiNoErr(s) {
+    return parseInt(s);
+}
+
+function getSequence(inputLines, numMap, dirMap, robotCount) {
+    let total = 0;
+    const cache = new Map();
+
+    for (const line of inputLines) {
+        const chars = line.split('');
+        const moves = getNumPadSequence(chars, "A", numMap);
+        const length = countSequences(moves, robotCount, 1, cache, dirMap);
+        total += atoiNoErr(line.slice(0, 3).replace(/^0+/, '')) * length;
+    }
+
+    return total;
+}
+
+function getNumPadSequence(inputChars, start, numMap) {
+    let curr = numMap[start];
+    const seq = [];
+
+    for (const char of inputChars) {
+        const dest = numMap[char];
+        const dx = dest.x - curr.x;
+        const dy = dest.y - curr.y;
+
+        const horiz = dx >= 0 ? Array(abs(dx)).fill(">") : Array(abs(dx)).fill("<");
+        const vert = dy >= 0 ? Array(abs(dy)).fill("^") : Array(abs(dy)).fill("v");
+
+        if (curr.y === 0 && dest.x === 0) {
+            seq.push(...vert, ...horiz);
+        } else if (curr.x === 0 && dest.y === 0) {
+            seq.push(...horiz, ...vert);
+        } else if (dx < 0) {
+            seq.push(...horiz, ...vert);
+        } else {
+            seq.push(...vert, ...horiz);
+        }
+
+        curr = dest;
+        seq.push("A");
+    }
+    
+    return seq;
+}
+
+function countSequences(inputSeq, maxRobots, robot, cache, dirMap) {
+    const key = inputSeq.join('');
+    
+    if (cache.has(key)) {
+        const val = cache.get(key);
+        if (robot <= val.length && val[robot-1] !== 0) {
+            return val[robot-1];
+        }
+    }
+
+    if (!cache.has(key)) {
+        cache.set(key, new Array(maxRobots).fill(0));
+    }
+
+    const seq = getDirPadSequence(inputSeq, "A", dirMap);
+    
+    if (robot === maxRobots) {
+        return seq.length;
+    }
+
+    const steps = splitSequence(seq);
+    let count = 0;
+    
+    for (const step of steps) {
+        const c = countSequences(step, maxRobots, robot+1, cache, dirMap);
+        count += c;
+    }
+
+    const cacheVal = cache.get(key);
+    cacheVal[robot-1] = count;
+    cache.set(key, cacheVal);
+    
+    return count;
+}
+
+function getDirPadSequence(inputChars, start, dirMap) {
+    let curr = dirMap[start];
+    const seq = [];
+
+    for (const char of inputChars) {
+        const dest = dirMap[char];
+        const dx = dest.x - curr.x;
+        const dy = dest.y - curr.y;
+
+        const horiz = dx >= 0 ? Array(abs(dx)).fill(">") : Array(abs(dx)).fill("<");
+        const vert = dy >= 0 ? Array(abs(dy)).fill("^") : Array(abs(dy)).fill("v");
+
+        if (curr.x === 0 && dest.y === 1) {
+            seq.push(...horiz, ...vert);
+        } else if (curr.y === 1 && dest.x === 0) {
+            seq.push(...vert, ...horiz);
+        } else if (dx < 0) {
+            seq.push(...horiz, ...vert);
+        } else {
+            seq.push(...vert, ...horiz);
+        }
+
+        curr = dest;
+        seq.push("A");
+    }
+    
+    return seq;
+}
+
+function splitSequence(inputSeq) {
+    const result = [];
+    let current = [];
+
+    for (const char of inputSeq) {
+        current.push(char);
+        if (char === "A") {
+            result.push(current);
+            current = [];
+        }
+    }
+    
+    return result;
 }
 // #endregion
 

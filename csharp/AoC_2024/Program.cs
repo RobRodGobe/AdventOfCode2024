@@ -2690,18 +2690,217 @@ namespace AoC_2024
         #endregion
     
         #region Day21
-        static int Day21a()
+        static long Day21a()
         {
             string[] file = ReadDayFile(21);
+            Dictionary<string, Coord> numMap = new Dictionary<string, Coord>
+            {
+                { "A", new Coord(2, 0) },
+                { "0", new Coord(1, 0) },
+                { "1", new Coord(0, 1) },
+                { "2", new Coord(1, 1) },
+                { "3", new Coord(2, 1) },
+                { "4", new Coord(0, 2) },
+                { "5", new Coord(1, 2) },
+                { "6", new Coord(2, 2) },
+                { "7", new Coord(0, 3) },
+                { "8", new Coord(1, 3) },
+                { "9", new Coord(2, 3) }
+            };
 
-            return file.Count();
+            Dictionary<string, Coord> dirMap = new Dictionary<string, Coord>
+            {
+                { "A", new Coord(2, 1) },
+                { "^", new Coord(1, 1) },
+                { "<", new Coord(0, 0) },
+                { "v", new Coord(1, 0) },
+                { ">", new Coord(2, 0) }
+            };
+
+            int robots = 2;
+            return GetSequence(file, numMap, dirMap, robots);
         }
 
-        static int Day21b()
+        static long Day21b()
         {
             string[] file = ReadDayFile(21);
+            Dictionary<string, Coord> numMap = new Dictionary<string, Coord>
+            {
+                { "A", new Coord(2, 0) },
+                { "0", new Coord(1, 0) },
+                { "1", new Coord(0, 1) },
+                { "2", new Coord(1, 1) },
+                { "3", new Coord(2, 1) },
+                { "4", new Coord(0, 2) },
+                { "5", new Coord(1, 2) },
+                { "6", new Coord(2, 2) },
+                { "7", new Coord(0, 3) },
+                { "8", new Coord(1, 3) },
+                { "9", new Coord(2, 3) }
+            };
 
-            return file.Count();
+            Dictionary<string, Coord> dirMap = new Dictionary<string, Coord>
+            {
+                { "A", new Coord(2, 1) },
+                { "^", new Coord(1, 1) },
+                { "<", new Coord(0, 0) },
+                { "v", new Coord(1, 0) },
+                { ">", new Coord(2, 0) }
+            };
+
+            int robots = 25;
+            return GetSequence(file, numMap, dirMap, robots);
+        }
+
+        static int Abs(int n) => Math.Abs(n);
+
+        static int AtoiNoErr(string s) => int.Parse(s);
+
+        static long GetSequence(string[] input, Dictionary<string, Coord> numMap, Dictionary<string, Coord> dirMap, int robotCount)
+        {
+            long total = 0;
+            var cache = new Dictionary<string, List<long>>();
+
+            foreach (var line in input)
+            {
+                var chars = line.ToCharArray().Select(c => c.ToString()).ToList();
+                var moves = GetNumPadSequence(chars, "A", numMap);
+                long length = CountSequences(moves, robotCount, 1, cache, dirMap);
+                total += AtoiNoErr(line.Substring(0, 3).TrimStart('0')) * length;
+            }
+
+            return total;
+        }
+
+        static List<string> GetNumPadSequence(List<string> input, string start, Dictionary<string, Coord> numMap)
+        {
+            var curr = numMap[start];
+            var seq = new List<string>();
+
+            foreach (var ch in input)
+            {
+                var dest = numMap[ch];
+                int dx = dest.X - curr.X, dy = dest.Y - curr.Y;
+
+                var horiz = Enumerable.Repeat(dx >= 0 ? ">" : "<", Abs(dx)).ToList();
+                var vert = Enumerable.Repeat(dy >= 0 ? "^" : "v", Abs(dy)).ToList();
+
+                if (curr.Y == 0 && dest.X == 0)
+                {
+                    seq.AddRange(vert);
+                    seq.AddRange(horiz);
+                }
+                else if (curr.X == 0 && dest.Y == 0)
+                {
+                    seq.AddRange(horiz);
+                    seq.AddRange(vert);
+                }
+                else if (dx < 0)
+                {
+                    seq.AddRange(horiz);
+                    seq.AddRange(vert);
+                }
+                else
+                {
+                    seq.AddRange(vert);
+                    seq.AddRange(horiz);
+                }
+
+                curr = dest;
+                seq.Add("A");
+            }
+
+            return seq;
+        }
+
+        static long CountSequences(List<string> input, int maxRobots, int robot, Dictionary<string, List<long>> cache, Dictionary<string, Coord> dirMap)
+        {
+            var key = string.Join("", input);
+
+            if (cache.TryGetValue(key, out var val) && robot <= val.Count && val[robot - 1] != 0)
+            {
+                return val[robot - 1];
+            }
+
+            if (!cache.ContainsKey(key))
+            {
+                cache[key] = new List<long>(new long[maxRobots]);
+            }
+
+            var seq = GetDirPadSequence(input, "A", dirMap);
+            if (robot == maxRobots)
+            {
+                return seq.Count;
+            }
+
+            var steps = SplitSequence(seq);
+            long count = 0;
+            foreach (var step in steps)
+            {
+                count += CountSequences(step, maxRobots, robot + 1, cache, dirMap);
+            }
+
+            cache[key][robot - 1] = count;
+            return count;
+        }
+
+        static List<string> GetDirPadSequence(List<string> input, string start, Dictionary<string, Coord> dirMap)
+        {
+            var curr = dirMap[start];
+            var seq = new List<string>();
+
+            foreach (var ch in input)
+            {
+                var dest = dirMap[ch];
+                int dx = dest.X - curr.X, dy = dest.Y - curr.Y;
+
+                var horiz = Enumerable.Repeat(dx >= 0 ? ">" : "<", Abs(dx)).ToList();
+                var vert = Enumerable.Repeat(dy >= 0 ? "^" : "v", Abs(dy)).ToList();
+
+                if (curr.X == 0 && dest.Y == 1)
+                {
+                    seq.AddRange(horiz);
+                    seq.AddRange(vert);
+                }
+                else if (curr.Y == 1 && dest.X == 0)
+                {
+                    seq.AddRange(vert);
+                    seq.AddRange(horiz);
+                }
+                else if (dx < 0)
+                {
+                    seq.AddRange(horiz);
+                    seq.AddRange(vert);
+                }
+                else
+                {
+                    seq.AddRange(vert);
+                    seq.AddRange(horiz);
+                }
+
+                curr = dest;
+                seq.Add("A");
+            }
+
+            return seq;
+        }
+
+        static List<List<string>> SplitSequence(List<string> input)
+        {
+            var result = new List<List<string>>();
+            var current = new List<string>();
+
+            foreach (var ch in input)
+            {
+                current.Add(ch);
+                if (ch == "A")
+                {
+                    result.Add(new List<string>(current));
+                    current.Clear();
+                }
+            }
+
+            return result;
         }
         #endregion
     }
