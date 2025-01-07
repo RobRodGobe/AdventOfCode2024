@@ -8,6 +8,9 @@ from collections import defaultdict, deque
 def main():
     # Day 1
     print(day24a(), day24b())
+    
+    # Day 25
+    print(day25())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -2302,6 +2305,51 @@ def find(a: str, b: str, operator: str, gates: List[str]) -> str:
         if gate.startswith(f"{a} {operator} {b}") or gate.startswith(f"{b} {operator} {a}"):
             return gate.split(" -> ")[-1]
     return ""
+# endregion
+
+# region Day25
+def day25():
+    file = readDayFile(25)
+    locks = []
+    keys = []
+
+    for i in range(0, len(file), 8):
+        if i + 7 > len(file):
+            break
+
+        heights = [0] * 5
+        is_lock = False
+
+        for row in range(7):
+            for col, char in enumerate(file[i + row].strip()):
+                if char == "#":
+                    heights[col] += 1
+
+            if row == 0 and file[i][0] == "#":
+                is_lock = True
+
+        for j in range(len(heights)):
+            heights[j] -= 1
+
+        if is_lock:
+            locks.append(heights)
+        else:
+            keys.append(heights)
+
+    matches = 0
+
+    for lock in locks:
+        for key in keys:
+            if check_match(lock, key):
+                matches += 1
+
+    return matches
+
+def check_match(lock, key):
+    for i in range(5):
+        if lock[i] + key[i] > 5:
+            return False
+    return True
 # endregion
 
 if __name__ == "__main__":

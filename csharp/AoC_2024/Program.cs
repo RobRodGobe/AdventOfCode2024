@@ -16,6 +16,9 @@ namespace AoC_2024
             Console.WriteLine(Day24a());
             /* Part b */
             Console.WriteLine(Day24b());
+
+            /* Day 25 */
+            Console.WriteLine(Day25());
         }
 
         static string[] ReadDayFile(int day)
@@ -3390,6 +3393,67 @@ namespace AoC_2024
                 g.StartsWith($"{a} {operation} {b}") || g.StartsWith($"{b} {operation} {a}"))
                 ?.Split(" -> ")
                 .LastOrDefault();
+        }
+        #endregion
+
+        #region Day25
+        static int Day25()
+        {
+            string[] file = ReadDayFile(25);
+            List<int[]> locks = new List<int[]>();
+            List<int[]> keys = new List<int[]>();
+
+            for (int i = 0; i < file.Length; i += 8)
+            {
+                if (i + 7 > file.Length)
+                    break;
+
+                int[] heights = new int[5];
+                bool isLock = false;
+
+                for (int row = 0; row < 7; row++)
+                {
+                    for (int col = 0; col < file[i + row].Length; col++)
+                    {
+                        if (file[i + row][col] == '#')
+                            heights[col]++;
+                    }
+
+                    if (row == 0 && file[i][0] == '#')
+                        isLock = true;
+                }
+
+                for (int j = 0; j < heights.Length; j++)
+                    heights[j]--;
+
+                if (isLock)
+                    locks.Add(heights);
+                else
+                    keys.Add(heights);
+            }
+
+            int matches = 0;
+
+            foreach (var lockItem in locks)
+            {
+                foreach (var key in keys)
+                {
+                    if (CheckMatch(lockItem, key))
+                        matches++;
+                }
+            }
+
+            return matches;
+        }
+
+        static bool CheckMatch(int[] lockItem, int[] key)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                if (lockItem[i] + key[i] > 5)
+                    return false;
+            }
+            return true;
         }
         #endregion
     }

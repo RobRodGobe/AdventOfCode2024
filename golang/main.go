@@ -17,6 +17,8 @@ import (
 func main() {
 	fmt.Println(day24a())
 	fmt.Println(day24b())
+
+	fmt.Println(day25())
 }
 
 // region Day1
@@ -3222,6 +3224,67 @@ func find(a, b, operator string, gates []string) string {
 		}
 	}
 	return ""
+}
+
+// endregion
+
+// region Day25
+func day25() int {
+	file := strings.Split(readDayFile(25), "\n")
+
+	var locks, keys [][]int
+
+	for i := 0; i < len(file); i += 8 {
+		if i+7 > len(file) {
+			break
+		}
+
+		heights := make([]int, 5)
+		isLock := false
+
+		for row := 0; row < 7; row++ {
+			for col, char := range file[i+row] {
+				if char == '#' {
+					heights[col]++
+				}
+			}
+
+			if row == 0 && file[i][0] == '#' {
+				isLock = true
+			}
+		}
+
+		for i := range heights {
+			heights[i]--
+		}
+
+		if isLock {
+			locks = append(locks, heights)
+		} else {
+			keys = append(keys, heights)
+		}
+	}
+
+	matches := 0
+
+	for _, lock := range locks {
+		for _, key := range keys {
+			if checkMatch(lock, key) {
+				matches++
+			}
+		}
+	}
+
+	return matches
+}
+
+func checkMatch(lock, key []int) bool {
+	for i := 0; i < 5; i++ {
+		if lock[i]+key[i] > 5 {
+			return false
+		}
+	}
+	return true
 }
 
 // endregion

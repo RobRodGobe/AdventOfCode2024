@@ -3,6 +3,9 @@ const { parse } = require('path');
 function main() {
     // Day 1 a + b
     console.log(day24a(), day24b());
+
+    // Day 25
+    console.log(day25());
 }
 
 function readDayFile(day){
@@ -2814,4 +2817,63 @@ function find(a, b, operator, gates) {
     return gate ? gate.split(" -> ").pop() : null;
 }
 // #endregion
+
+// #region Day25
+function day25() {
+    const file = readDayFile(25).split("\n");
+    const locks = [];
+    const keys = [];
+
+    for (let i = 0; i < file.length; i += 8) {
+        if (i + 7 > file.length) break;
+
+        const heights = Array(5).fill(0);
+        let isLock = false;
+
+        for (let row = 0; row < 7; row++) {
+            for (let col = 0; col < file[i + row].length; col++) {
+                if (file[i + row][col] === "#") {
+                    heights[col]++;
+                }
+            }
+
+            if (row === 0 && file[i][0] === "#") {
+                isLock = true;
+            }
+        }
+
+        for (let j = 0; j < heights.length; j++) {
+            heights[j]--;
+        }
+
+        if (isLock) {
+            locks.push(heights);
+        } else {
+            keys.push(heights);
+        }
+    }
+
+    let matches = 0;
+
+    for (const lock of locks) {
+        for (const key of keys) {
+            if (checkMatch(lock, key)) {
+                matches++;
+            }
+        }
+    }
+
+    return matches;
+}
+
+function checkMatch(lock, key) {
+    for (let i = 0; i < 5; i++) {
+        if (lock[i] + key[i] > 5) {
+            return false;
+        }
+    }
+    return true;
+}
+// #endregion
+
 main();
