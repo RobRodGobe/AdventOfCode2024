@@ -15,8 +15,8 @@ import (
 )
 
 func main() {
-	fmt.Println(day22a())
-	fmt.Println(day22b())
+	fmt.Println(day23a())
+	fmt.Println(day23b())
 }
 
 // region Day1
@@ -2872,6 +2872,179 @@ type price struct {
 }
 
 type Monkey map[sequence]int
+
+// endregion
+
+// region Day23
+func day23a() int {
+	file := strings.Split(readDayFile(23), "\n")
+
+	np := newNetworkProcessor()
+	np.processLinks(file)
+	np.findNetworks()
+	return np.countNetworks()
+}
+
+func day23b() string {
+	file := strings.Split(readDayFile(23), "\n")
+
+	np := newNetworkProcessor()
+	np.processLinks(file)
+	np.findNetworks()
+	return np.findBiggestNetwork()
+}
+
+type link struct {
+	first, second string
+}
+
+type network struct {
+	output      string
+	connections map[string]struct{}
+}
+
+type computer struct {
+	name  string
+	links map[string]struct{}
+}
+
+type networkProcessor struct {
+	networks    map[string]struct{}
+	comps       map[string]computer
+	simpleComps map[string][]string
+}
+
+func newNetworkProcessor() *networkProcessor {
+	return &networkProcessor{
+		networks:    make(map[string]struct{}),
+		comps:       make(map[string]computer),
+		simpleComps: make(map[string][]string),
+	}
+}
+
+func (np *networkProcessor) processLinks(linkStrs []string) {
+	for _, linkStr := range linkStrs {
+		computers := strings.Split(linkStr, "-")
+		l := link{computers[0], computers[1]}
+
+		np.addOrUpdateComputer(l.first, l.second)
+		np.addOrUpdateComputer(l.second, l.first)
+	}
+
+	np.populateSimpleComps()
+}
+
+func (np *networkProcessor) addOrUpdateComputer(compName, linkedCompName string) {
+	comp, exists := np.comps[compName]
+	if !exists {
+		comp = computer{compName, make(map[string]struct{})}
+	}
+	comp.links[linkedCompName] = struct{}{}
+	np.comps[compName] = comp
+}
+
+func (np *networkProcessor) populateSimpleComps() {
+	for _, v := range np.comps {
+		links := make([]string, 0, len(v.links))
+		for li := range v.links {
+			links = append(links, li)
+		}
+		np.simpleComps[v.name] = links
+	}
+}
+
+func (np *networkProcessor) findNetworks() {
+	for name, com := range np.simpleComps {
+		linkCount := len(com)
+		for i := 0; i < linkCount-1; i++ {
+			for j := i + 1; j < linkCount; j++ {
+				iName, jName := com[i], com[j]
+				iCom := np.comps[iName]
+				if _, iContainsJ := iCom.links[jName]; iContainsJ {
+					names := []string{name, iName, jName}
+					sort.Strings(names)
+					np.networks[strings.Join(names, ",")] = struct{}{}
+				}
+			}
+		}
+	}
+}
+
+func (np *networkProcessor) countNetworks() (count int) {
+	for n := range np.networks {
+		if n[0] == 't' || n[3] == 't' || n[6] == 't' {
+			count++
+		}
+	}
+	return
+}
+
+func (np *networkProcessor) findBiggestNetwork() string {
+	networkCache := make(map[string]struct{})
+	var retval string
+
+	for _, v := range np.comps {
+		longestFound := np.bfs(v, networkCache)
+		if len(longestFound) > len(retval) {
+			retval = longestFound
+		}
+	}
+
+	return retval
+}
+
+func (np *networkProcessor) bfs(c computer, networkCache map[string]struct{}) string {
+	start := network{c.name, map[string]struct{}{c.name: {}}}
+	networkCache[start.output] = struct{}{}
+	queue := []network{start}
+
+	var n network
+	for len(queue) > 0 {
+		n, queue = queue[0], queue[1:]
+		for candidate := range c.links {
+			if _, ok := n.connections[candidate]; ok {
+				continue
+			}
+			if np.isConnected(n, candidate) {
+				next := n.add(candidate)
+				if _, ok := networkCache[next.output]; !ok {
+					queue = append(queue, next)
+					networkCache[next.output] = struct{}{}
+				}
+			}
+		}
+	}
+
+	return n.output
+}
+
+func (np *networkProcessor) isConnected(n network, candidate string) bool {
+	for existing := range n.connections {
+		if _, ok := np.comps[existing].links[candidate]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func (n network) add(c string) network {
+	newConnections := make(map[string]struct{})
+	for k, v := range n.connections {
+		newConnections[k] = v
+	}
+	newConnections[c] = struct{}{}
+
+	newOutput := make([]string, 0, len(newConnections))
+	for k := range newConnections {
+		newOutput = append(newOutput, k)
+	}
+	sort.Strings(newOutput)
+
+	return network{
+		output:      strings.Join(newOutput, ","),
+		connections: newConnections,
+	}
+}
 // endregion
 
 func readDayFile(day int32) string {

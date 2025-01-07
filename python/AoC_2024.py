@@ -1,13 +1,13 @@
 import re
 import math
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Set
 from enum import Enum
 import heapq
-from collections import defaultdict
+from collections import defaultdict, deque
 
 def main():
     # Day 1
-    print(day22a(), day22b())
+    print(day23a(), day23b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -2087,6 +2087,114 @@ def monkey_from_seed(seeds: List[int], sim_steps: int) -> Dict[Sequence, int]:
                 retval[seq] = retval.get(seq, 0) + prices[i].cost
     
     return retval
+# endregion
+
+# region Day23
+def day23a():
+    file = [line.strip() for line in readDayFile(23)]
+
+    np = NetworkProcessor()
+    np.process_links(file)
+    np.find_networks()
+    return np.count_networks()
+
+
+def day23b():
+    file = readDayFile(23)
+
+    np = NetworkProcessor()
+    np.process_links(file)
+    np.find_networks()
+    return np.find_biggest_network()
+
+
+class Network:
+    def __init__(self, output: str, connections: Set[str]):
+        self.output = output
+        self.connections = connections
+
+    def add(self, candidate: str) -> "Network":
+        new_connections = self.connections | {candidate}
+        new_output = ",".join(sorted(new_connections))
+        return Network(new_output, new_connections)
+
+
+class Computer:
+    def __init__(self, name):
+        self.name = name
+        self.links = set()
+
+
+class NetworkProcessor:
+    def __init__(self):
+        self.networks: Set[str] = set()
+        self.comps: Dict[str, Computer] = {}
+        self.simple_comps: Dict[str, List[str]] = defaultdict(list)
+
+    def process_links(self, link_strs: List[str]):
+        for link_str in link_strs:
+            first, second = link_str.strip().split("-")
+            self.add_or_update_computer(first, second)
+            self.add_or_update_computer(second, first)
+        self.populate_simple_comps()
+
+    def add_or_update_computer(self, comp_name: str, linked_comp_name: str):
+        if comp_name not in self.comps:
+            self.comps[comp_name] = Computer(comp_name)
+        self.comps[comp_name].links.add(linked_comp_name)
+
+    def populate_simple_comps(self):
+        for comp in self.comps.values():
+            self.simple_comps[comp.name] = list(comp.links)
+
+    def find_networks(self):
+        for name, links in self.simple_comps.items():
+            for i in range(len(links) - 1):
+                for j in range(i + 1, len(links)):
+                    i_name = links[i]
+                    j_name = links[j]
+                    if j_name in self.comps[i_name].links:
+                        names = ",".join(sorted([name, i_name, j_name]))
+                        self.networks.add(names)
+
+    def count_networks(self) -> int:
+        return sum(1 for network in self.networks 
+                if network[0] == 't' or 
+                    (len(network) > 3 and network[3] == 't') or 
+                    (len(network) > 6 and network[6] == 't'))
+
+    def find_biggest_network(self) -> str:
+        network_cache = set()
+        retval = ""
+
+        for comp in self.comps.values():
+            longest_found = self.bfs(comp, network_cache)
+            if len(longest_found) > len(retval):
+                retval = longest_found
+
+        return retval
+
+    def bfs(self, comp: Computer, network_cache: Set[str]) -> str:
+        start = Network(comp.name, {comp.name})
+        network_cache.add(start.output)
+        queue = deque([start])
+
+        n = start
+        while queue:
+            n = queue.popleft()
+            for candidate in comp.links:
+                if candidate in n.connections:
+                    continue
+                if self.is_connected(n, candidate):
+                    next_network = n.add(candidate)
+                    if next_network.output not in network_cache:
+                        queue.append(next_network)
+                        network_cache.add(next_network.output)
+
+        return n.output
+
+    def is_connected(self, n: Network, candidate: str) -> bool:
+        return all(candidate in self.comps[existing].links for existing in n.connections)
 # endregion
 
 if __name__ == "__main__":

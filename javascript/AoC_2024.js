@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day22a(), day22b());
+    console.log(day23a(), day23b());
 }
 
 function readDayFile(day){
@@ -2545,6 +2545,141 @@ function monkeyFromSeed(seeds, simSteps) {
     return retval;
 }
 
+// #endregion
+
+// #region Day23
+function day23a() {
+    const file = readDayFile(23).split('\n');
+    const np = new NetworkProcessor();
+    np.processLinks(file);
+    np.findNetworks();
+    return np.countNetworks();
+}
+
+function day23b() {
+    const file = readDayFile(23).split('\n');
+    const np = new NetworkProcessor();
+    np.processLinks(file);
+    np.findNetworks();
+    return np.findBiggestNetwork();
+}
+
+class Link {
+    constructor(first, second) {
+        this.first = first;
+        this.second = second;
+    }
+}
+
+class Network {
+    constructor(output, connections) {
+        this.output = output;
+        this.connections = connections;
+    }
+
+    add(candidate) {
+        const newConnections = { ...this.connections, [candidate]: true };
+        const newOutput = Object.keys(newConnections).sort().join(',');
+        return new Network(newOutput, newConnections);
+    }
+}
+
+class Computer {
+    constructor(name) {
+        this.name = name;
+        this.links = {};
+    }
+}
+
+class NetworkProcessor {
+    constructor() {
+        this.networks = {};
+        this.comps = {};
+        this.simpleComps = {};
+    }
+
+    processLinks(linkStrs) {
+        linkStrs.forEach(linkStr => {
+            const [first, second] = linkStr.split('-');
+            this.addOrUpdateComputer(first, second);
+            this.addOrUpdateComputer(second, first);
+        });
+        this.populateSimpleComps();
+    }
+
+    addOrUpdateComputer(compName, linkedCompName) {
+        if (!this.comps[compName]) {
+            this.comps[compName] = new Computer(compName);
+        }
+        this.comps[compName].links[linkedCompName] = true;
+    }
+
+    populateSimpleComps() {
+        Object.values(this.comps).forEach(comp => {
+            this.simpleComps[comp.name] = Object.keys(comp.links);
+        });
+    }
+
+    findNetworks() {
+        Object.entries(this.simpleComps).forEach(([name, links]) => {
+            for (let i = 0; i < links.length - 1; i++) {
+                for (let j = i + 1; j < links.length; j++) {
+                    const iName = links[i];
+                    const jName = links[j];
+                    if (this.comps[iName].links[jName]) {
+                        const names = [name, iName, jName].sort().join(',');
+                        this.networks[names] = true;
+                    }
+                }
+            }
+        });
+    }
+
+    countNetworks() {
+        return Object.keys(this.networks).filter(n => n[0] === 't' || n[3] === 't' || n[6] === 't').length;
+    }
+
+    findBiggestNetwork() {
+        const networkCache = new Set();
+        let retval = '';
+
+        Object.values(this.comps).forEach(comp => {
+            const longestFound = this.bfs(comp, networkCache);
+            if (longestFound.length > retval.length) {
+                retval = longestFound;
+            }
+        });
+
+        return retval;
+    }
+
+    bfs(comp, networkCache) {
+        const start = new Network(comp.name, { [comp.name]: true });
+        networkCache.add(start.output);
+        const queue = [start];
+
+        let n = null;
+        while (queue.length > 0) {
+            n = queue.shift();
+            for (const candidate of Object.keys(comp.links)) {
+                if (n.connections[candidate]) continue;
+                if (this.isConnected(n, candidate)) {
+                    const next = n.add(candidate);
+                    if (!networkCache.has(next.output)) {
+                        queue.push(next);
+                        networkCache.add(next.output);
+                    }
+                }
+            }
+        }
+
+        return n.output;
+    }
+
+    isConnected(n, candidate) {
+        return Object.keys(n.connections).every(existing => this.comps[existing].links[candidate]);
+    }
+}
 // #endregion
 
 main();

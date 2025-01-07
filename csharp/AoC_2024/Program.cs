@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day22a());
+            Console.WriteLine(Day23a());
             /* Part b */
-            Console.WriteLine(Day22b());
+            Console.WriteLine(Day23b());
         }
 
         static string[] ReadDayFile(int day)
@@ -3054,6 +3054,189 @@ namespace AoC_2024
             {
                 Cost = cost;
                 Change = change;
+            }
+        }
+        #endregion
+    
+        #region Day23
+        static int Day23a()
+        {
+            string[] file = ReadDayFile(23);
+            var np = new NetworkProcessor();
+            np.ProcessLinks(file);
+            np.FindNetworks();
+            return np.CountNetworks();
+        }
+
+        static string Day23b()
+        {
+            string[] file = ReadDayFile(23);
+            var np = new NetworkProcessor();
+            np.ProcessLinks(file);
+            np.FindNetworks();
+            return np.FindBiggestNetwork();
+        }
+
+        class Link
+        {
+            public string First { get; }
+            public string Second { get; }
+
+            public Link(string first, string second)
+            {
+                First = first;
+                Second = second;
+            }
+        }
+
+        class Network
+        {
+            public string Output { get; }
+            public Dictionary<string, bool> Connections { get; }
+
+            public Network(string output, Dictionary<string, bool> connections)
+            {
+                Output = output;
+                Connections = connections;
+            }
+
+            public Network Add(string c)
+            {
+                var newConnections = new Dictionary<string, bool>(Connections) { [c] = true };
+                var newOutput = string.Join(",", newConnections.Keys.OrderBy(k => k));
+                return new Network(newOutput, newConnections);
+            }
+        }
+
+        class Computer
+        {
+            public string Name { get; }
+            public Dictionary<string, bool> Links { get; }
+
+            public Computer(string name)
+            {
+                Name = name;
+                Links = new Dictionary<string, bool>();
+            }
+        }
+
+        class NetworkProcessor
+        {
+            public Dictionary<string, bool> Networks { get; }
+            public Dictionary<string, Computer> Comps { get; }
+            public Dictionary<string, List<string>> SimpleComps { get; }
+
+            public NetworkProcessor()
+            {
+                Networks = new Dictionary<string, bool>();
+                Comps = new Dictionary<string, Computer>();
+                SimpleComps = new Dictionary<string, List<string>>();
+            }
+
+            public void ProcessLinks(string[] linkStrs)
+            {
+                foreach (var linkStr in linkStrs)
+                {
+                    var computers = linkStr.Split("-");
+                    AddOrUpdateComputer(computers[0], computers[1]);
+                    AddOrUpdateComputer(computers[1], computers[0]);
+                }
+
+                PopulateSimpleComps();
+            }
+
+            public void AddOrUpdateComputer(string compName, string linkedCompName)
+            {
+                if (!Comps.TryGetValue(compName, out var comp))
+                {
+                    comp = new Computer(compName);
+                }
+                comp.Links[linkedCompName] = true;
+                Comps[compName] = comp;
+            }
+
+            public void PopulateSimpleComps()
+            {
+                foreach (var comp in Comps.Values)
+                {
+                    SimpleComps[comp.Name] = comp.Links.Keys.ToList();
+                }
+            }
+
+            public void FindNetworks()
+            {
+                foreach (var (name, links) in SimpleComps)
+                {
+                    var linkCount = links.Count;
+                    for (var i = 0; i < linkCount - 1; i++)
+                    {
+                        for (var j = i + 1; j < linkCount; j++)
+                        {
+                            var iName = links[i];
+                            var jName = links[j];
+                            if (Comps[iName].Links.ContainsKey(jName))
+                            {
+                                var names = new[] { name, iName, jName }.OrderBy(n => n).ToArray();
+                                Networks[string.Join(",", names)] = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            public int CountNetworks()
+            {
+                return Networks.Keys.Count(n => n[0] == 't' || n[3] == 't' || n[6] == 't');
+            }
+
+            public string FindBiggestNetwork()
+            {
+                var networkCache = new HashSet<string>();
+                var retval = string.Empty;
+
+                foreach (var comp in Comps.Values)
+                {
+                    var longestFound = BFS(comp, networkCache);
+                    if (longestFound.Length > retval.Length)
+                    {
+                        retval = longestFound;
+                    }
+                }
+
+                return retval;
+            }
+
+            public string BFS(Computer comp, HashSet<string> networkCache)
+            {
+                var start = new Network(comp.Name, new Dictionary<string, bool> { [comp.Name] = true });
+                networkCache.Add(start.Output);
+                var queue = new Queue<Network>();
+                queue.Enqueue(start);
+
+                Network n = null;
+                while (queue.Count > 0)
+                {
+                    n = queue.Dequeue();
+                    foreach (var candidate in comp.Links.Keys)
+                    {
+                        if (n.Connections.ContainsKey(candidate)) continue;
+                        if (IsConnected(n, candidate))
+                        {
+                            var next = n.Add(candidate);
+                            if (networkCache.Add(next.Output))
+                            {
+                                queue.Enqueue(next);
+                            }
+                        }
+                    }
+                }
+
+                return n.Output;
+            }
+
+            public bool IsConnected(Network n, string candidate)
+            {
+                return n.Connections.Keys.All(existing => Comps[existing].Links.ContainsKey(candidate));
             }
         }
         #endregion
