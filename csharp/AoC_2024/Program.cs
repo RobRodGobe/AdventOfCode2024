@@ -13,9 +13,9 @@ namespace AoC_2024
         {
             /* Day 1 */
             /* Part a */
-            Console.WriteLine(Day23a());
+            Console.WriteLine(Day24a());
             /* Part b */
-            Console.WriteLine(Day23b());
+            Console.WriteLine(Day24b());
         }
 
         static string[] ReadDayFile(int day)
@@ -3238,6 +3238,158 @@ namespace AoC_2024
             {
                 return n.Connections.Keys.All(existing => Comps[existing].Links.ContainsKey(candidate));
             }
+        }
+        #endregion
+    
+        #region Day24
+        static string Day24a()
+        {
+            var file = ReadDayFile(24);
+            var (wires, gates) = ParsePuzzleInput(file);
+
+            while (gates.Count > 0)
+            {
+                foreach (var wireName in gates.Keys.ToList())
+                {
+                    var gate = gates[wireName];
+                    if (CanEvalGate(gate, wires))
+                    {
+                        wires[wireName] = EvaluateGate(gate, wires);
+                        gates.Remove(wireName);
+                    }
+                }
+            }
+
+            var zWires = wires.Keys.Where(w => w.StartsWith("z")).OrderBy(w => w).ToList();
+            long result = 0;
+
+            for (int i = zWires.Count - 1; i >= 0; i--)
+            {
+                result = (result << 1) | wires[zWires[i]];
+            }
+
+            return result.ToString();
+        }
+
+        static string Day24b()
+        {
+            var file = ReadDayFile(24);
+            var (_, gates) = ParsePuzzleInput(file);
+
+            var swapped = new List<string>();
+            string carry = null;
+
+            var gateStrings = gates.Select(g => 
+                $"{g.Value.Inputs[0]} {new[] { "AND", "OR", "XOR" }[g.Value.Operation]} {g.Value.Inputs[1]} -> {g.Key}")
+                .ToList();
+
+            for (int i = 0; i < 45; i++)
+            {
+                var n = i.ToString("D2");
+                string m1 = Find($"x{n}", $"y{n}", "XOR", gateStrings);
+                string n1 = Find($"x{n}", $"y{n}", "AND", gateStrings);
+                string r1 = null, z1 = null, c1 = null;
+
+                if (carry != null)
+                {
+                    r1 = Find(carry, m1, "AND", gateStrings);
+                    if (r1 == null)
+                    {
+                        (m1, n1) = (n1, m1);
+                        swapped.AddRange(new[] { m1, n1 });
+                        r1 = Find(carry, m1, "AND", gateStrings);
+                    }
+
+                    z1 = Find(carry, m1, "XOR", gateStrings);
+
+                    if (m1.StartsWith("z")) { (m1, z1) = (z1, m1); swapped.AddRange(new[] { m1, z1 }); }
+                    if (n1.StartsWith("z")) { (n1, z1) = (z1, n1); swapped.AddRange(new[] { n1, z1 }); }
+                    if (r1.StartsWith("z")) { (r1, z1) = (z1, r1); swapped.AddRange(new[] { r1, z1 }); }
+
+                    c1 = Find(r1, n1, "OR", gateStrings);
+                }
+
+                if (c1?.StartsWith("z") == true && c1 != "z45")
+                {
+                    (c1, z1) = (z1, c1);
+                    swapped.AddRange(new[] { c1, z1 });
+                }
+
+                carry = carry == null ? n1 : c1;
+            }
+
+            swapped.Sort();
+            return string.Join(",", swapped);
+        }        
+
+        class GateInfo
+        {
+            public int Operation { get; set; }
+            public string[] Inputs { get; set; }
+            public string Output { get; set; }
+        }
+
+        static (Dictionary<string, long> Wires, Dictionary<string, GateInfo> Gates) ParsePuzzleInput(string[] input)
+        {
+            var parts = string.Join("\n", input).Split("\n\n");
+            var wires = parts[0]
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Split(": "))
+                .ToDictionary(p => p[0], p => long.Parse(p[1]));
+
+            var gates = parts[1]
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(line =>
+                {
+                    var gateParts = line.Split(" -> ");
+                    var inputs = gateParts[0].Split(' ');
+
+                    int operation = inputs[1] switch
+                    {
+                        "AND" => 0,
+                        "OR" => 1,
+                        "XOR" => 2,
+                        _ => throw new InvalidOperationException()
+                    };
+
+                    return new KeyValuePair<string, GateInfo>(
+                        gateParts[1],
+                        new GateInfo
+                        {
+                            Operation = operation,
+                            Inputs = new[] { inputs[0], inputs[2] },
+                            Output = gateParts[1]
+                        });
+                })
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            return (wires, gates);
+        }
+
+        static long EvaluateGate(GateInfo gate, Dictionary<string, long> wires)
+        {
+            var in1 = wires[gate.Inputs[0]];
+            var in2 = wires[gate.Inputs[1]];
+
+            return gate.Operation switch
+            {
+                0 => in1 & in2,
+                1 => in1 | in2,
+                2 => in1 ^ in2,
+                _ => 0
+            };
+        }
+
+        static bool CanEvalGate(GateInfo gate, Dictionary<string, long> wires)
+        {
+            return wires.ContainsKey(gate.Inputs[0]) && wires.ContainsKey(gate.Inputs[1]);
+        }
+        static string Find(string a, string b, string operation, List<string> gates)
+        {
+            return gates.FirstOrDefault(g =>
+                g.StartsWith($"{a} {operation} {b}") || g.StartsWith($"{b} {operation} {a}"))
+                ?.Split(" -> ")
+                .LastOrDefault();
         }
         #endregion
     }

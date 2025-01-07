@@ -2,7 +2,7 @@ const { parse } = require('path');
 
 function main() {
     // Day 1 a + b
-    console.log(day23a(), day23b());
+    console.log(day24a(), day24b());
 }
 
 function readDayFile(day){
@@ -2682,4 +2682,136 @@ class NetworkProcessor {
 }
 // #endregion
 
+// #region Day24
+function day24a() {
+    const file = readDayFile(24);
+    const { wires, gates } = parsePuzzleInput(file);
+
+    while (Object.keys(gates).length > 0) {
+        for (const wireName of Object.keys(gates)) {
+            const gate = gates[wireName];
+            if (canEvalGate(gate, wires)) {
+                wires[wireName] = evaluateGate(gate, wires);
+                delete gates[wireName];
+            }
+        }
+    }
+
+    const zWires = Object.keys(wires)
+        .filter(w => w.startsWith("z"))
+        .sort();
+
+    let result = BigInt(0);
+    for (let i = zWires.length - 1; i >= 0; i--) {
+        result = (result << BigInt(1)) | BigInt(wires[zWires[i]]);
+    }
+
+    return result.toString();
+}
+
+function day24b() {
+    const file = readDayFile(24);
+    const { gates } = parsePuzzleInput(file);
+
+    const swapped = [];
+    let carry = null;
+
+    const gateStrings = Object.entries(gates).map(([wireName, gate]) =>
+        `${gate.inputs[0]} ${["AND", "OR", "XOR"][gate.operation]} ${gate.inputs[1]} -> ${wireName}`
+    );
+
+    for (let i = 0; i < 45; i++) {
+        const n = i.toString().padStart(2, "0");
+        let m1 = find(`x${n}`, `y${n}`, "XOR", gateStrings);
+        let n1 = find(`x${n}`, `y${n}`, "AND", gateStrings);
+        let r1 = null, z1 = null, c1 = null;
+
+        if (carry) {
+            r1 = find(carry, m1, "AND", gateStrings);
+            if (!r1) {
+                [m1, n1] = [n1, m1];
+                swapped.push(m1, n1);
+                r1 = find(carry, m1, "AND", gateStrings);
+            }
+
+            z1 = find(carry, m1, "XOR", gateStrings);
+
+            if (m1.startsWith("z")) [m1, z1] = [z1, m1], swapped.push(m1, z1);
+            if (n1.startsWith("z")) [n1, z1] = [z1, n1], swapped.push(n1, z1);
+            if (r1.startsWith("z")) [r1, z1] = [z1, r1], swapped.push(r1, z1);
+
+            c1 = find(r1, n1, "OR", gateStrings);
+        }
+
+        if (c1?.startsWith("z") && c1 !== "z45") {
+            [c1, z1] = [z1, c1];
+            swapped.push(c1, z1);
+        }
+
+        carry = carry ? c1 : n1;
+    }
+
+    swapped.sort();
+    return swapped.join(",");
+}
+
+function parsePuzzleInput(input) {
+    const parts = input.split("\n\n");
+    const wires = Object.fromEntries(
+        parts[0]
+            .split("\n")
+            .map(line => line.split(": "))
+            .map(([key, value]) => [key, BigInt(value)])
+    );
+
+    const gates = Object.fromEntries(
+        parts[1]
+            .split("\n")
+            .filter(line => line)
+            .map(line => {
+                const [inputStr, output] = line.split(" -> ");
+                const inputs = inputStr.split(" ");
+                let operation;
+
+                if (inputs[1] === "AND") operation = 0;
+                else if (inputs[1] === "OR") operation = 1;
+                else if (inputs[1] === "XOR") operation = 2;
+
+                return [
+                    output,
+                    {
+                        operation,
+                        inputs: [inputs[0], inputs[2]],
+                        output
+                    }
+                ];
+            })
+    );
+
+    return { wires, gates };
+}
+
+function evaluateGate(gate, wires) {
+    const in1 = wires[gate.inputs[0]];
+    const in2 = wires[gate.inputs[1]];
+
+    switch (gate.operation) {
+        case 0: return in1 & in2;
+        case 1: return in1 | in2;
+        case 2: return in1 ^ in2;
+    }
+    return BigInt(0);
+}
+
+function canEvalGate(gate, wires) {
+    return wires.hasOwnProperty(gate.inputs[0]) && wires.hasOwnProperty(gate.inputs[1]);
+}
+
+function find(a, b, operator, gates) {
+    const gate = gates.find(g =>
+        g.startsWith(`${a} ${operator} ${b}`) || g.startsWith(`${b} ${operator} ${a}`)
+    );
+    return gate ? gate.split(" -> ").pop() : null;
+}
+// #endregion
 main();

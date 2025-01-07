@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 
 def main():
     # Day 1
-    print(day23a(), day23b())
+    print(day24a(), day24b())
 
 def readDayFile(day):
     file_path = f"../AoC_Files/{day}.txt"
@@ -2195,6 +2195,113 @@ class NetworkProcessor:
 
     def is_connected(self, n: Network, candidate: str) -> bool:
         return all(candidate in self.comps[existing].links for existing in n.connections)
+# endregion
+
+# region Day24
+def day24a():
+    file = readDayFile(24)
+    wires, gates = parse_puzzle_input(file)
+
+    while gates:
+        for wire_name, gate in list(gates.items()):
+            if can_eval_gate(gate, wires):
+                wires[wire_name] = evaluate_gate(gate, wires)
+                del gates[wire_name]
+
+    z_wires = sorted(w for w in wires if w.startswith("z"))
+
+    result = 0
+    for wire in reversed(z_wires):
+        result = (result << 1) | wires[wire]
+
+    return str(result)
+
+def day24b():
+    file = readDayFile(24)
+    _, gates = parse_puzzle_input(file)
+
+    swapped = []
+    carry = None
+
+    gate_strings = [
+        f"{gate['inputs'][0]} {['AND', 'OR', 'XOR'][gate['operation']]} {gate['inputs'][1]} -> {wire_name}"
+        for wire_name, gate in gates.items()
+    ]
+
+    for i in range(45):
+        n = f"{i:02}"
+        m1 = find(f"x{n}", f"y{n}", "XOR", gate_strings)
+        n1 = find(f"x{n}", f"y{n}", "AND", gate_strings)
+
+        r1, z1, c1 = None, None, None
+
+        if carry:
+            r1 = find(carry, m1, "AND", gate_strings)
+            if not r1:
+                m1, n1 = n1, m1
+                swapped.extend([m1, n1])
+                r1 = find(carry, m1, "AND", gate_strings)
+
+            z1 = find(carry, m1, "XOR", gate_strings)
+
+            if m1.startswith("z"):
+                m1, z1 = z1, m1
+                swapped.extend([m1, z1])
+            if n1.startswith("z"):
+                n1, z1 = z1, n1
+                swapped.extend([n1, z1])
+            if r1.startswith("z"):
+                r1, z1 = z1, r1
+                swapped.extend([r1, z1])
+
+            c1 = find(r1, n1, "OR", gate_strings)
+
+        if c1 and c1.startswith("z") and c1 != "z45":
+            c1, z1 = z1, c1
+            swapped.extend([c1, z1])
+
+        carry = n1 if carry is None else c1
+
+    swapped.sort()
+    return ",".join(swapped)
+
+def parse_puzzle_input(input: List[str]) -> Tuple[Dict[str, int], Dict[str, Dict]]:
+    parts = "\n".join(line.strip() for line in input).split("\n\n")
+    wires = {line.split(": ")[0]: int(line.split(": ")[1]) for line in parts[0].split("\n")}
+
+    gates = {}
+    for line in parts[1].split("\n"):
+        if not line:
+            continue
+        left, output = line.split(" -> ")
+        inputs = left.split(" ")
+
+        if len(inputs) == 3:
+            operation = ["AND", "OR", "XOR"].index(inputs[1])
+            gates[output] = {"operation": operation, "inputs": [inputs[0], inputs[2]], "output": output}
+
+    return wires, gates
+
+def evaluate_gate(gate: Dict, wires: Dict[str, int]) -> int:
+    in1 = wires[gate["inputs"][0]]
+    in2 = wires[gate["inputs"][1]]
+
+    if gate["operation"] == 0:
+        return in1 & in2
+    elif gate["operation"] == 1:
+        return in1 | in2
+    elif gate["operation"] == 2:
+        return in1 ^ in2
+    return 0
+
+def can_eval_gate(gate: Dict, wires: Dict[str, int]) -> bool:
+    return all(input_name in wires for input_name in gate["inputs"])
+
+def find(a: str, b: str, operator: str, gates: List[str]) -> str:
+    for gate in gates:
+        if gate.startswith(f"{a} {operator} {b}") or gate.startswith(f"{b} {operator} {a}"):
+            return gate.split(" -> ")[-1]
+    return ""
 # endregion
 
 if __name__ == "__main__":
