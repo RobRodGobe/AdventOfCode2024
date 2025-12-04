@@ -341,3 +341,7 @@ healthchecksdb
 
 # VSCode Workspaces
 *.code-workspace
+
+# Local puzzle inputs (do not commit personal/problem input files)
+# This ignores the InputFiles folder and everything under it.
+/AoC_Files/
